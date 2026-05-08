@@ -1,7 +1,6 @@
 package io.kiw.luxis.web.test.handler;
 
 import io.kiw.luxis.web.handler.JsonHandler;
-import io.kiw.luxis.web.http.client.HttpClientResponse;
 import io.kiw.luxis.web.http.client.LuxisHttpClient;
 import io.kiw.luxis.web.internal.LuxisPipeline;
 import io.kiw.luxis.web.pipeline.HttpStream;

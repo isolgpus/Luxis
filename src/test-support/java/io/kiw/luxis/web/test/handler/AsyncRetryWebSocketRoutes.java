@@ -3,7 +3,6 @@ package io.kiw.luxis.web.test.handler;
 import io.kiw.luxis.result.Result;
 import io.kiw.luxis.web.handler.WebSocketRoutes;
 import io.kiw.luxis.web.http.ErrorMessageResponse;
-import io.kiw.luxis.web.http.HttpErrorResponse;
 import io.kiw.luxis.web.http.client.LuxisAsync;
 import io.kiw.luxis.web.pipeline.AsyncMapConfigBuilder;
 import io.kiw.luxis.web.pipeline.WebSocketRoutesRegister;

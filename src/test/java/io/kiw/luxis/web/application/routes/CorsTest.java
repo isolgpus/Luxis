@@ -8,10 +8,10 @@ import io.kiw.luxis.web.test.TestClient;
 import io.kiw.luxis.web.test.TestFilter;
 import io.kiw.luxis.web.test.TestHttpResponse;
 import io.kiw.luxis.web.test.handler.EchoRequest;
-import io.kiw.luxis.web.test.handler.TestFilterRequest;
 import io.kiw.luxis.web.test.handler.GetEchoHandler;
 import io.kiw.luxis.web.test.handler.PostEchoHandler;
 import io.kiw.luxis.web.test.handler.TestFilterHandler;
+import io.kiw.luxis.web.test.handler.TestFilterRequest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,7 +22,6 @@ import java.util.Collection;
 
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.createTestServerAndClient;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 

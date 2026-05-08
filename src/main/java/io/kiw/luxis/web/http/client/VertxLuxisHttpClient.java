@@ -2,8 +2,8 @@ package io.kiw.luxis.web.http.client;
 
 import io.kiw.luxis.result.Result;
 import io.kiw.luxis.web.http.ErrorMessageResponse;
-import io.kiw.luxis.web.http.HttpErrorResponse;
 import io.kiw.luxis.web.http.HttpBuffer;
+import io.kiw.luxis.web.http.HttpErrorResponse;
 import io.kiw.luxis.web.internal.ClientWebSocketHandler;
 import io.kiw.luxis.web.internal.PendingAsyncResponses;
 import io.kiw.luxis.web.internal.VertxClientWebSocketConnection;

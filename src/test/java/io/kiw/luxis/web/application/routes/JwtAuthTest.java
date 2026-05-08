@@ -20,7 +20,6 @@ import java.util.Map;
 
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.createTestServerAndClient;
 import static io.kiw.luxis.web.test.TestHelper.json;
 import static org.junit.Assert.assertEquals;
 

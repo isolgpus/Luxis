@@ -1,9 +1,6 @@
 package io.kiw.luxis.web.application.routes;
 
-import io.kiw.luxis.web.handler.JsonHandler;
 import io.kiw.luxis.web.http.Method;
-import io.kiw.luxis.web.internal.LuxisPipeline;
-import io.kiw.luxis.web.pipeline.HttpStream;
 import io.kiw.luxis.web.test.AsyncTestSupport;
 import io.kiw.luxis.web.test.InMemoryDatabaseClient;
 import io.kiw.luxis.web.test.InMemoryEventConsumer;
@@ -73,15 +70,14 @@ public class EventConsumerTest {
         final AtomicReference<Animal> received = new AtomicReference<>();
 
         publisherTestClientAndServer = createTestServerAndClient(mode, 8081, (r, state) -> {
-            r.jsonRoute("/publishToOther", Method.POST, new GenericAppState(), PublishTestRequest.class, new JsonHandler<PublishTestRequest, PublishTestResponse, GenericAppState>() {
-                @Override
-                public LuxisPipeline<PublishTestResponse> handle(final HttpStream<PublishTestRequest, GenericAppState> e) {
-                    return e.inTransaction(tx -> tx.asyncMap(ctx -> {
-                        ctx.publisher().publish("topic", "{\"type\":\"someKey\", \"payload\": {\"animal\":\"fish\"}}");
-                        return AsyncTestSupport.completed(new PublishTestResponse());
-                    }).commit()).complete();
-                }
-            });
+            r.jsonRoute("/publishToOther", Method.POST, new GenericAppState(), PublishTestRequest.class,
+                    e -> e.inTransaction(
+                                    tx -> tx.asyncMap(
+                                            ctx -> {
+                                                ctx.publisher().publish("topic", "{\"type\":\"someKey\", \"payload\": {\"animal\":\"fish\"}}");
+                                                return AsyncTestSupport.completed(new PublishTestResponse());
+                                            }).commit())
+                            .complete());
         }, tm, publisher, outbox);
 
         consumerTestClientAndServer = createTestServerAndClient(mode, (r, state) -> {

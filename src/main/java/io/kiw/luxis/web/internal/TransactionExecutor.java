@@ -167,7 +167,7 @@ public class TransactionExecutor {
             return;
         }
         executionDispatcher.handleOnApplicationContext(appendCf, ex ->
-                rollback(tm, tx, exceptionHandler, () -> exceptionHandler.accept(ex)),
+                        rollback(tm, tx, exceptionHandler, () -> exceptionHandler.accept(ex)),
                 v -> commit(session, appState, subChain, finalValue, tx, tm, exceptionHandler, callbacks));
     }
 

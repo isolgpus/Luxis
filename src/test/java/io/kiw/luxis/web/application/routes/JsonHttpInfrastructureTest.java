@@ -7,14 +7,11 @@ import io.kiw.luxis.web.test.TestClient;
 import io.kiw.luxis.web.test.TestFilter;
 import io.kiw.luxis.web.test.TestHelper;
 import io.kiw.luxis.web.test.TestHttpResponse;
-import io.kiw.luxis.web.test.handler.BlockingRequest;
-import io.kiw.luxis.web.test.handler.EchoRequest;
-import io.kiw.luxis.web.test.handler.TestFilterRequest;
-import io.kiw.luxis.web.test.handler.ThrowRequest;
-import io.kiw.luxis.web.test.handler.ValidationRequest;
 import io.kiw.luxis.web.test.handler.BlockingCompleteTestHandler;
 import io.kiw.luxis.web.test.handler.BlockingFlatMapFailHandler;
+import io.kiw.luxis.web.test.handler.BlockingRequest;
 import io.kiw.luxis.web.test.handler.BlockingTestHandler;
+import io.kiw.luxis.web.test.handler.EchoRequest;
 import io.kiw.luxis.web.test.handler.ErrorFilter;
 import io.kiw.luxis.web.test.handler.FailingTestHandler;
 import io.kiw.luxis.web.test.handler.FileDownloaderHandler;
@@ -24,7 +21,10 @@ import io.kiw.luxis.web.test.handler.GetTestFilterHandler;
 import io.kiw.luxis.web.test.handler.PostEchoHandler;
 import io.kiw.luxis.web.test.handler.StateTestHandler;
 import io.kiw.luxis.web.test.handler.TestFilterHandler;
+import io.kiw.luxis.web.test.handler.TestFilterRequest;
+import io.kiw.luxis.web.test.handler.ThrowRequest;
 import io.kiw.luxis.web.test.handler.ThrowTestHandler;
+import io.kiw.luxis.web.test.handler.ValidationRequest;
 import io.kiw.luxis.web.test.handler.ValidationTestHandler;
 import org.junit.After;
 import org.junit.Assert;
@@ -37,7 +37,6 @@ import java.util.Collection;
 
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.createTestServerAndClient;
 import static io.kiw.luxis.web.test.TestHelper.json;
 
 @RunWith(Parameterized.class)

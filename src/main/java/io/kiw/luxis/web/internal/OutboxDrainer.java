@@ -24,7 +24,8 @@ public final class OutboxDrainer {
         this.vertx = vertx;
         this.publisher = publisher;
         this.store = store;
-        this.exceptionHandler = exceptionHandler != null ? exceptionHandler : err -> {};
+        this.exceptionHandler = exceptionHandler != null ? exceptionHandler : err -> {
+        };
     }
 
     public void start() {

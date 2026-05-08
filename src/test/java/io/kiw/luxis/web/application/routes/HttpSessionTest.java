@@ -6,10 +6,10 @@ import io.kiw.luxis.web.test.StubRequest;
 import io.kiw.luxis.web.test.TestClient;
 import io.kiw.luxis.web.test.TestHttpResponse;
 import io.kiw.luxis.web.test.handler.ContextAssertingAsyncBlockingHttpHandler;
-import io.kiw.luxis.web.test.handler.ContextRequest;
 import io.kiw.luxis.web.test.handler.ContextAssertingAsyncHttpHandler;
 import io.kiw.luxis.web.test.handler.ContextAssertingHttpHandler;
 import io.kiw.luxis.web.test.handler.ContextAssertingPeekHttpHandler;
+import io.kiw.luxis.web.test.handler.ContextRequest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -21,7 +21,6 @@ import java.util.Collection;
 
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.createTestServerAndClient;
 import static io.kiw.luxis.web.test.TestHelper.json;
 
 @RunWith(Parameterized.class)

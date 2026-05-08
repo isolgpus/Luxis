@@ -10,7 +10,7 @@ public final class WebServerTestMain {
     public static void main(final String[] args) {
 
         final Luxis<MyApplicationState> luxis = Luxis.app(
-                routesRegister -> TestApplicationRoutes.registerRoutes(routesRegister, new MyApplicationState()))
+                        routesRegister -> TestApplicationRoutes.registerRoutes(routesRegister, new MyApplicationState()))
                 .withConfig(new WebServiceConfigBuilder()
                         .setPort(8080)
                         .setDefaultBlockingTimeoutMillis(5000)

@@ -58,7 +58,8 @@ public class HttpWebSocketRouteHandlerImpl<APP, RESP> implements HttpWebSocketRo
                 if (instruction.isValidation()) {
                     switch (config.failedValidationStrategy()) {
                         case JustSendValidationError ignored -> sendErrorEnvelope(session, error);
-                        case SendValidationErrorsAndDisconnectSession ignored -> sendErrorEnvelope(session, error).thenAccept(result -> session.close());
+                        case SendValidationErrorsAndDisconnectSession ignored ->
+                                sendErrorEnvelope(session, error).thenAccept(result -> session.close());
                         case DisconnectSession ignored -> session.close();
                     }
                 } else {

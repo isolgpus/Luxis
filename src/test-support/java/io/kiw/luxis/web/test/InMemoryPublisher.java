@@ -35,8 +35,17 @@ public class InMemoryPublisher implements Publisher {
         events.add("publishBatch:" + batch.size());
         for (final PendingOutboxEvent pe : batch) {
             events.add(formatLine(pe));
+            InMemoryEventBus.publish(pe.event().key(), payloadAsBuffer(pe.event().payload()));
         }
         return Future.succeededFuture();
+    }
+
+    private static ByteBuffer payloadAsBuffer(final OutboxEvent.Payload payload) {
+        return switch (payload) {
+            case OutboxEvent.Payload.Str s -> ByteBuffer.wrap(s.value().getBytes(StandardCharsets.UTF_8));
+            case OutboxEvent.Payload.Bytes b -> ByteBuffer.wrap(b.value());
+            case OutboxEvent.Payload.Buf b -> b.value().duplicate();
+        };
     }
 
     private static String formatLine(final PendingOutboxEvent pe) {
@@ -44,7 +53,8 @@ public class InMemoryPublisher implements Publisher {
         final long id = pe.id();
         return switch (event.payload()) {
             case OutboxEvent.Payload.Str s -> "publish:str:" + id + ":" + event.key() + ":" + s.value();
-            case OutboxEvent.Payload.Bytes b -> "publish:bytes:" + id + ":" + event.key() + ":" + new String(b.value(), StandardCharsets.UTF_8);
+            case OutboxEvent.Payload.Bytes b ->
+                    "publish:bytes:" + id + ":" + event.key() + ":" + new String(b.value(), StandardCharsets.UTF_8);
             case OutboxEvent.Payload.Buf b -> "publish:buf:" + id + ":" + event.key() + ":" + readBuffer(b.value());
         };
     }

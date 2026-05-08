@@ -1,7 +1,8 @@
-   package io.kiw.luxis.web;
+package io.kiw.luxis.web;
 
 import io.kiw.luxis.result.Result;
 import io.kiw.luxis.web.http.HttpErrorResponse;
+import io.kiw.luxis.web.internal.EventConsumerHandler;
 import io.kiw.luxis.web.internal.PendingAsyncResponses;
 import io.kiw.luxis.web.test.StubRouter;
 import io.kiw.luxis.web.test.StubTimeoutScheduler;
@@ -19,16 +20,23 @@ public class TestLuxis<APP> implements Luxis<APP> {
     private final PendingAsyncResponses pendingAsyncResponses;
     private final StubTimeoutScheduler stubTimeoutScheduler;
     private final TimeInjector timeInjector;
+    private final EventConsumerHandler eventConsumerHandler;
     private volatile Vertx vertx;
 
     @SuppressWarnings("unchecked")
     TestLuxis(final StubRouter router, final APP applicationState, final Consumer<Exception>[] exceptionHandlerRef, final PendingAsyncResponses pendingAsyncResponses, final StubTimeoutScheduler stubTimeoutScheduler, final TimeInjector timeInjector) {
+        this(router, applicationState, exceptionHandlerRef, pendingAsyncResponses, stubTimeoutScheduler, timeInjector, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    TestLuxis(final StubRouter router, final APP applicationState, final Consumer<Exception>[] exceptionHandlerRef, final PendingAsyncResponses pendingAsyncResponses, final StubTimeoutScheduler stubTimeoutScheduler, final TimeInjector timeInjector, final EventConsumerHandler eventConsumerHandler) {
         this.router = router;
         this.applicationState = applicationState;
         this.exceptionHandlerRef = exceptionHandlerRef;
         this.pendingAsyncResponses = pendingAsyncResponses;
         this.stubTimeoutScheduler = stubTimeoutScheduler;
         this.timeInjector = timeInjector;
+        this.eventConsumerHandler = eventConsumerHandler;
     }
 
 
@@ -65,6 +73,9 @@ public class TestLuxis<APP> implements Luxis<APP> {
 
     @Override
     public synchronized void close() {
+        if (eventConsumerHandler != null) {
+            eventConsumerHandler.close();
+        }
         if (vertx != null) {
             vertx.close().toCompletionStage().toCompletableFuture().join();
             vertx = null;

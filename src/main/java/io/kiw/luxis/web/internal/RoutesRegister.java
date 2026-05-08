@@ -3,13 +3,13 @@ package io.kiw.luxis.web.internal;
 import io.kiw.luxis.web.RouteConfig;
 import io.kiw.luxis.web.RouteConfigBuilder;
 import io.kiw.luxis.web.WebSocketRouteConfig;
-import io.kiw.luxis.web.db.DatabaseClient;
 import io.kiw.luxis.web.WebSocketRouteConfigBuilder;
 import io.kiw.luxis.web.cors.CorsConfig;
-import io.kiw.luxis.web.handler.JsonHandler;
+import io.kiw.luxis.web.db.DatabaseClient;
 import io.kiw.luxis.web.handler.FileDownloadRoute;
 import io.kiw.luxis.web.handler.FileUploadRoute;
 import io.kiw.luxis.web.handler.JsonFilter;
+import io.kiw.luxis.web.handler.JsonHandler;
 import io.kiw.luxis.web.handler.WebSocketRoutes;
 import io.kiw.luxis.web.http.DownloadFileResponse;
 import io.kiw.luxis.web.http.ErrorMessageResponse;
@@ -19,16 +19,20 @@ import io.kiw.luxis.web.http.HttpResult;
 import io.kiw.luxis.web.http.Method;
 import io.kiw.luxis.web.internal.ender.FileEnder;
 import io.kiw.luxis.web.internal.ender.JsonEnder;
+import io.kiw.luxis.web.messaging.EventSession;
 import io.kiw.luxis.web.openapi.OpenApiCollector;
 import io.kiw.luxis.web.openapi.OpenApiHandler;
 import io.kiw.luxis.web.openapi.RouteDescriptor;
 import io.kiw.luxis.web.openapi.TypeResolver;
 import io.kiw.luxis.web.pipeline.HttpStream;
+import io.kiw.luxis.web.pipeline.LuxisStream;
 import tools.jackson.databind.ObjectMapper;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.TRANSFER_ENCODING;
 
@@ -41,6 +45,7 @@ public class RoutesRegister {
     private final PendingAsyncResponses pendingAsyncResponses;
     private final DatabaseClient<?, ?, ?> databaseClient;
     private final MessagingComponents messaging;
+    private final LinkedHashMap<String, EventRouteEntry> eventRoutes = new LinkedHashMap<>();
 
     public RoutesRegister(final RouterWrapper router, final ExecutionDispatcher executionDispatcher, final PendingAsyncResponses pendingAsyncResponses) {
         this(router, executionDispatcher, pendingAsyncResponses, null, MessagingComponents.NONE);
@@ -148,6 +153,36 @@ public class RoutesRegister {
         ));
 
         router.route(path, method, "multipart/form-data", "application/json", flow, new RouteConfigBuilder().build());
+    }
+
+    public <APP, T> void eventRoute(final String key, final APP applicationState, final Class<T> messageType,
+                                    final Function<LuxisStream<T, APP, Void, ErrorMessageResponse, EventSession>, LuxisPipeline<?>> handler) {
+        if (eventRoutes.containsKey(key)) {
+            throw new IllegalArgumentException("Duplicate event route key: " + key);
+        }
+        final LuxisStream<T, APP, Void, ErrorMessageResponse, EventSession> stream =
+                new LuxisStream<>(new ArrayList<>(), applicationState, pendingAsyncResponses, (msg, cause) -> msg, null, databaseClient, messaging);
+        final LuxisPipeline<?> pipeline = handler.apply(stream);
+        eventRoutes.put(key, new EventRouteEntry(pipeline, messageType));
+    }
+
+    public Map<String, EventRouteEntry> getEventRoutes() {
+        return eventRoutes;
+    }
+
+    public record EventRouteEntry(LuxisPipeline<?> pipeline, Class<?> messageType) {
+    }
+
+    public ExecutionDispatcher getExecutionDispatcher() {
+        return executionDispatcher;
+    }
+
+    public PendingAsyncResponses getPendingAsyncResponses() {
+        return pendingAsyncResponses;
+    }
+
+    public MessagingComponents getMessaging() {
+        return messaging;
     }
 
     public <APP, RESP> void webSocketRoute(final String path, final APP applicationState, final WebSocketRoutes<APP, RESP> route) {

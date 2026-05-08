@@ -155,7 +155,7 @@ public class TransactionExecutor {
         final OutboxStore<?> store = messaging.outboxStore();
         if (store == null) {
             rollback(tm, tx, exceptionHandler, () -> exceptionHandler.accept(new IllegalStateException(
-                    "Events were published inside a transaction but no OutboxStore is registered at Luxis.start(...) / Luxis.test(...).")));
+                    "Events were published inside a transaction but no OutboxStore is registered at Luxis.app(...).")));
             return;
         }
         final OutboxStore rawStore = (OutboxStore) store;

@@ -209,7 +209,7 @@ public class LuxisStream<IN, APP, RESP, ERR, SESSION> {
     public <OUT> LuxisStream<OUT, APP, RESP, ERR, SESSION> inTransaction(
             final Function<TransactionStream<IN, APP, ERR, SESSION>, CompletedTransaction<OUT, APP, ERR, SESSION>> builder) {
         if (databaseClient == null) {
-            throw new IllegalStateException("Cannot call .inTransaction(...) — no DatabaseClient registered at Luxis.start(...) / Luxis.test(...).");
+            throw new IllegalStateException("Cannot call .inTransaction(...) — no DatabaseClient registered at Luxis.app(...).");
         }
         final CompletedTransaction<OUT, APP, ERR, SESSION> completed = builder.apply(new TransactionStream<>());
         final MapInstruction<IN, OUT, APP, SESSION, ERR> e = MapInstruction.transactional(completed.subChain(), false);

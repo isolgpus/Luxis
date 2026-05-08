@@ -1,6 +1,6 @@
 ---
 name: luxis
-description: Use when working with the Luxis web framework for Java. Triggers on imports from `io.kiw.luxis`, usage of `HttpStream`, `JsonHandler`, `JsonFilter`, `Luxis.start`, `Luxis.test`, `RequestPipeline`, `HttpResult`, or when the user asks about building or testing a Luxis application.
+description: Use when working with the Luxis web framework for Java. Triggers on imports from `io.kiw.luxis`, usage of `HttpStream`, `JsonHandler`, `JsonFilter`, `Luxis.app`, `RequestPipeline`, `HttpResult`, or when the user asks about building or testing a Luxis application.
 ---
 
 # Luxis

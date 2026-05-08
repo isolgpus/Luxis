@@ -29,7 +29,7 @@ public final class TransactionPublisher {
     private void require() {
         if (buffer == null) {
             throw new IllegalStateException(
-                    "Cannot publish from inside a transaction without an OutboxStore registered at Luxis.start(...) / Luxis.test(...).");
+                    "Cannot publish from inside a transaction without an OutboxStore registered at Luxis.app(...).");
         }
     }
 }

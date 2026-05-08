@@ -98,10 +98,14 @@ public final class MyBrokerPublisher implements Publisher, AutoCloseable {
 final Publisher publisher = new MyBrokerPublisher(config);
 final OutboxStore<MyTx> outbox = new MyOutboxStore();
 
-Luxis.start(routes, webConfig, databaseClient, publisher, outbox);
+Luxis.app(routes)
+    .withConfig(webConfig)
+    .withDatabase(databaseClient)
+    .withEventPlatform(EventPlatform.of(publisher, outbox, eventConsumer))
+    .start();
 ```
 
-The user provides `OutboxStore` (the persistence side). You provide `Publisher` (the wire side). Both are registered together at `Luxis.start`.
+The user provides `OutboxStore` (the persistence side). You provide `Publisher` (the wire side). Both are registered together via `EventPlatform`.
 
 ## Testing
 
@@ -109,7 +113,7 @@ Three layers, in order of effort:
 
 1. **Unit-test the payload switch.** Pass an `OutboxEvent` of each variant (`Str`, `Bytes`, `Buf`) with a fake/mocked client and assert all three reach the wire with the correct bytes.
 2. **Unit-test the all-or-nothing semantics.** Stub the client so the second `send` in a batch fails. Assert the future returned from `publish(...)` is failed and the cause is propagated.
-3. **Round-trip test with `Luxis.test(...)`.** Use `InMemoryDatabaseClient` + a real `OutboxStore` impl + your `Publisher` against an embedded broker or test container. Hit a route that uses `ctx.publisher().publish(...)` inside a transaction, assert the broker received the event after the response is returned. (See `https://isolgpus.github.io/Luxis/testing/` for the test client.)
+3. **Round-trip test with `Luxis.app(...).test()`.** Use `InMemoryDatabaseClient` + a real `OutboxStore` impl + your `Publisher` against an embedded broker or test container. Hit a route that uses `ctx.publisher().publish(...)` inside a transaction, assert the broker received the event after the response is returned. (See `https://isolgpus.github.io/Luxis/testing/` for the test client.)
 
 ## Common mistakes (don't do these)
 

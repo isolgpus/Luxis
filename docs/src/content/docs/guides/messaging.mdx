@@ -75,10 +75,14 @@ Override `drainerEnabled()` to return `false` if you want to drain the outbox yo
 ## Registration
 
 ```java
-Luxis.start(routes, config, databaseClient, publisher, outboxStore);
+Luxis.app(routes)
+    .withConfig(config)
+    .withDatabase(databaseClient)
+    .withEventPlatform(EventPlatform.of(publisher, outboxStore, eventConsumer))
+    .start();
 ```
 
-When all three are registered, Luxis starts a periodic drainer (`pollIntervalMillis`, `batchSize`) and kicks it after every successful commit so events ship as soon as possible.
+When the platform is registered, Luxis starts a periodic drainer (`pollIntervalMillis`, `batchSize`) and kicks it after every successful commit so events ship as soon as possible.
 
 If you don't register a `Publisher` + `OutboxStore`, calls to `ctx.publisher().publish(...)` fail with a clear `IllegalStateException` — no silent dropping.
 
@@ -87,7 +91,7 @@ If you don't register a `Publisher` + `OutboxStore`, calls to `ctx.publisher().p
 - Buffers in-tx events in memory.
 - Calls `OutboxStore.append(tx, events)` immediately before `DatabaseClient.commit(tx)`.
 - Rolls back if either append or commit fails (events are lost together with the data — atomic outcome).
-- Owns a periodic drainer (one per Luxis instance, started on `Luxis.start`, stopped on `close`).
+- Owns a periodic drainer (one per Luxis instance, started on `.start()`, stopped on `close`).
 - Re-entrancy guard: only one drain pass at a time per instance.
 - Kicks the drainer after every commit.
 
@@ -96,6 +100,60 @@ If you don't register a `Publisher` + `OutboxStore`, calls to `ctx.publisher().p
 - Designing the outbox table (Luxis doesn't prescribe a schema — your `OutboxStore` knows how to read/write it).
 - Deduplication / idempotency on the consumer side. The drainer retries on the next tick when `Publisher.publish` fails, so your broker may see duplicates.
 - Backoff and dead-lettering policy if you want them — wrap your `Publisher` and `OutboxStore` accordingly.
+
+## Consuming events
+
+Luxis can also subscribe to a single topic and route incoming messages to typed pipelines via `eventRoute(...)`. You provide an `EventConsumer` that knows how to talk to your broker and decode the wire format; Luxis dispatches each message to the matching route.
+
+One `EventConsumer` per Luxis instance, one topic per consumer. Routes within that topic are differentiated by a routing key extracted from each message (e.g. a JSON envelope's `"type"` field, a Kafka header, an SBE template id).
+
+### Registering routes
+
+```java
+r.eventRoute("orderPlaced", appState, OrderPlaced.class, stream -> stream
+    .map(ctx -> ctx.in())                       // ctx.in() is the decoded OrderPlaced
+    .blockingPeek(ctx -> ordersDao.record(ctx.in()))
+    .complete());
+```
+
+`eventRoute` mirrors `jsonRoute` but the terminal stage produces no response — events have no reply. Pipelines support the full DSL (`map`, `flatMap`, `blockingMap`, `asyncMap`, `validate`, `inTransaction`, `ctx.publisher()`, …) with the same threading rules as HTTP routes.
+
+Duplicate keys throw `IllegalArgumentException` at registration. Messages whose key has no registered route are reported via the configured `exceptionHandler` and dropped; the same applies to decode failures.
+
+### EventConsumer SPI
+
+```java
+public interface EventConsumer extends AutoCloseable {
+    String topic();
+    String extractKey(ByteBuffer message);
+    <T> T decode(ByteBuffer message, Class<T> type);
+    void start(EventDispatcher dispatcher);
+    @Override void close();
+}
+
+@FunctionalInterface
+public interface EventDispatcher {
+    void dispatch(ByteBuffer message);
+}
+```
+
+- `topic()` — informational; documents which topic this consumer is bound to.
+- `extractKey(buf)` — pure function from the raw message to the routing key. Treat the buffer as read-only; `duplicate()` if you advance positions.
+- `decode(buf, type)` — the codec strategy. One wire format per topic, so the consumer owns deserialization. Routes declare just `Class<T>` and `ctx.in()` is typed `T`. If you really want raw bytes, register the route with `ByteBuffer.class` and have `decode` return the buffer.
+- `start(dispatcher)` — Luxis calls this after routes are registered. Subscribe to the broker and call `dispatcher.dispatch(buf)` per message.
+- `close()` — Luxis calls this on shutdown to unsubscribe and release resources.
+
+### Registration
+
+```java
+Luxis.app(routes)
+    .withConfig(config)
+    .withDatabase(databaseClient)
+    .withEventPlatform(EventPlatform.of(publisher, outboxStore, eventConsumer))
+    .start();
+```
+
+The same `EventPlatform` registers the publish side (`Publisher` + `OutboxStore`) and the consume side (`EventConsumer`). All three are optional within the platform — register only the sides you use.
 
 ## Error semantics
 
@@ -107,3 +165,7 @@ If you don't register a `Publisher` + `OutboxStore`, calls to `ctx.publisher().p
 | `OutboxStore.append` fails | Rollback → `exceptionHandler` invoked. |
 | `Publisher.publish` fails during a drain pass | Whole batch stays pending; next tick retries the entire batch. Exception forwarded to the configured handler. |
 | `OutboxStore.markBatchSent` fails | Logged via `exceptionHandler`; the batch may be re-published on the next tick. Plan for at-least-once on the consumer side. |
+| `EventConsumer.extractKey` throws | Reported via `exceptionHandler`; message dropped. |
+| Incoming message has no matching `eventRoute` key | `IllegalStateException` reported via `exceptionHandler`; message dropped. |
+| `EventConsumer.decode` throws | Reported via `exceptionHandler`; message dropped, pipeline does not run. |
+| Event-route pipeline throws or returns a failure | Reported via `exceptionHandler` (event routes have no client to reply to). |

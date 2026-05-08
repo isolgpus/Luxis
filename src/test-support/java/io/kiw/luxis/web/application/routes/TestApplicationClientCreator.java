@@ -139,25 +139,16 @@ public class TestApplicationClientCreator {
     }
 
     private static Luxis<MyApplicationState> startReal(final ApplicationRoutesRegister<MyApplicationState> routes, final WebServerConfig config, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore, final EventConsumer eventConsumer) {
-        final EventPlatform events = toEventPlatform(publisher, outboxStore, eventConsumer);
-        if (events != null) {
-            return Luxis.start(routes, config, databaseClient, events);
-        }
-        if (databaseClient != null) {
-            return Luxis.start(routes, config, databaseClient);
-        }
-        return Luxis.start(routes, config);
+        return builder(routes, config, databaseClient, publisher, outboxStore, eventConsumer).start();
     }
 
     private static Luxis<MyApplicationState> startTest(final ApplicationRoutesRegister<MyApplicationState> routes, final WebServerConfig config, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore, final EventConsumer eventConsumer) {
+        return builder(routes, config, databaseClient, publisher, outboxStore, eventConsumer).test();
+    }
+
+    private static io.kiw.luxis.web.LuxisBuilder<MyApplicationState> builder(final ApplicationRoutesRegister<MyApplicationState> routes, final WebServerConfig config, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore, final EventConsumer eventConsumer) {
         final EventPlatform events = toEventPlatform(publisher, outboxStore, eventConsumer);
-        if (events != null) {
-            return Luxis.test(routes, config, databaseClient, events);
-        }
-        if (databaseClient != null) {
-            return Luxis.test(routes, config, databaseClient);
-        }
-        return Luxis.test(routes, config);
+        return Luxis.app(routes).withConfig(config).withDatabase(databaseClient).withEventPlatform(events);
     }
 
     private static EventPlatform toEventPlatform(final Publisher publisher, final OutboxStore<?> outboxStore, final EventConsumer eventConsumer) {

@@ -35,7 +35,10 @@ Only these operations are available inside the sub-chain. Blocking steps and arb
 ## Registering a TransactionManager
 
 ```java
-Luxis.start(routes, config, new MyTransactionManager());
+Luxis.app(routes)
+    .withConfig(config)
+    .withDatabase(new MyDatabaseClient())
+    .start();
 ```
 
 `TransactionManager<TX>` is a four-method SPI:

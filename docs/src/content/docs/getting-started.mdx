@@ -33,11 +33,11 @@ public class HelloWorldHandler implements JsonHandler<HelloWorldRequest, HelloWo
 Start the server and register your routes:
 
 ```java
-WebServer.start(routesRegister -> {
+Luxis.app(routesRegister -> {
     AppState appState = new AppState();
     routesRegister.jsonRoute("/hello/world", Method.POST, appState.helloWorldState, HelloWorldRequest.class, new HelloWorldHandler());
     return appState;
-});
+}).start();
 ```
 
 The `jsonRoute` method registers a typed JSON endpoint. It takes:

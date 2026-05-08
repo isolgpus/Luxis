@@ -9,13 +9,13 @@ public final class DocumentationExampleMain {
 
     public static void main(final String[] args) {
 
-        Luxis.start(
+        Luxis.app(
                 routesRegister -> {
                     final AppState appState = new AppState();
 
                     routesRegister.jsonRoute("/hello/world", Method.POST, appState, HelloWorldRequest.class, new HelloWorldHandler());
                     return appState;
-                });
+                }).start();
 
     }
 }

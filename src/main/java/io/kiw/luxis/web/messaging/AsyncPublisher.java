@@ -37,7 +37,7 @@ public final class AsyncPublisher<ERR> {
     private LuxisAsync<Void, ERR> dispatch(final OutboxEvent event) {
         if (outboxStore == null || databaseClient == null) {
             throw new IllegalStateException(
-                    "Cannot publish — no Publisher registered at Luxis.start(...) / Luxis.test(...).");
+                    "Cannot publish — no Publisher registered at Luxis.app(...).");
         }
         return wrap(appendInOwnTx(event));
     }

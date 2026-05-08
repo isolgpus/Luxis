@@ -9,7 +9,7 @@ This is where Luxis delivers on its promise. The same test code runs against an 
 
 | | In-memory (stub) | Real server (Vert.x) |
 |---|---|---|
-| **Factory** | `Luxis.test(routes)` | `Luxis.start(routes)` |
+| **Factory** | `Luxis.app(routes).test()` | `Luxis.app(routes).start()` |
 | **Speed** | Milliseconds | Seconds |
 | **Network** | None — everything runs in-process | Real HTTP over localhost |
 | **When to use** | Day-to-day development, CI | Final verification, debugging network-level issues |
@@ -32,7 +32,7 @@ public static MyState registerRoutes(RoutesRegister routesRegister) {
 In production:
 
 ```java
-Luxis.start(MyApp::registerRoutes);
+Luxis.app(MyApp::registerRoutes).start();
 ```
 
 ## Creating a test client
@@ -40,7 +40,7 @@ Luxis.start(MyApp::registerRoutes);
 ### In-memory (stub)
 
 ```java
-Luxis<MyState> luxis = Luxis.test(MyApp::registerRoutes);
+Luxis<MyState> luxis = Luxis.app(MyApp::registerRoutes).test();
 TestClient client = new StubTestClient("127.0.0.1", 8080, luxis);
 ```
 
@@ -49,8 +49,9 @@ No server starts. No ports are opened. Your handlers execute synchronously in-pr
 ### Real server (Vert.x)
 
 ```java
-Luxis<MyState> luxis = Luxis.start(MyApp::registerRoutes,
-    new WebServiceConfigBuilder().setPort(8080).build());
+Luxis<MyState> luxis = Luxis.app(MyApp::registerRoutes)
+    .withConfig(new WebServiceConfigBuilder().setPort(8080).build())
+    .start();
 TestClient client = new VertxTestClient("127.0.0.1", 8080);
 ```
 
@@ -82,7 +83,7 @@ public class EchoTest {
 
     @Before
     public void setUp() {
-        luxis = Luxis.test(MyApp::registerRoutes);
+        luxis = Luxis.app(MyApp::registerRoutes).test();
         client = new StubTestClient("127.0.0.1", 8080, luxis);
     }
 
@@ -120,8 +121,9 @@ To run this same test against the real Vert.x server, change two lines in `setUp
 ```java
 @Before
 public void setUp() {
-    luxis = Luxis.start(MyApp::registerRoutes,
-        new WebServiceConfigBuilder().setPort(8080).build());
+    luxis = Luxis.app(MyApp::registerRoutes)
+        .withConfig(new WebServiceConfigBuilder().setPort(8080).build())
+        .start();
     client = new VertxTestClient("127.0.0.1", 8080);
 }
 ```
@@ -175,18 +177,18 @@ The in-memory mode extends beyond a single service. You can wire multiple Luxis 
 
 ```java
 // Create the downstream service in-memory
-Luxis<DownstreamState> downstream = Luxis.test(DownstreamApp::registerRoutes);
+Luxis<DownstreamState> downstream = Luxis.app(DownstreamApp::registerRoutes).test();
 
 // Create an HTTP client that talks to the downstream service in-memory
 LuxisHttpClient httpClient = StubLuxisHttpClient.create(downstream);
 
 // Create the upstream service, injecting the HTTP client
-Luxis<UpstreamState> upstream = Luxis.test(r -> {
+Luxis<UpstreamState> upstream = Luxis.<UpstreamState>app(r -> {
     UpstreamState state = new UpstreamState();
     r.jsonRoute("/call-next", Method.POST, state, HttpClientGetRequest.class,
         new HttpClientCallHandler(httpClient, "http://127.0.0.1:8091"));
     return state;
-});
+}).test();
 
 TestClient client = new StubTestClient("127.0.0.1", 8090, upstream);
 
@@ -196,7 +198,7 @@ TestHttpResponse response = client.post(
         .body(json().put("targetPath", "/api/value").toString()));
 ```
 
-In stub mode, all of this runs in-memory. To switch to real HTTP, replace `Luxis.test` with `Luxis.start` and `StubLuxisHttpClient` with `VertxLuxisHttpClient`. The test assertions don't change.
+In stub mode, all of this runs in-memory. To switch to real HTTP, replace `.test()` with `.start()` on the builder and `StubLuxisHttpClient` with `VertxLuxisHttpClient`. The test assertions don't change.
 
 ## Exception handling in tests
 

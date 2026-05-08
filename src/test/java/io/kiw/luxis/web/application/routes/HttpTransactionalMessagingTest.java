@@ -193,11 +193,10 @@ public class HttpTransactionalMessagingTest {
     @Test
     public void shouldFailWhenInsideTxPublishHasNoOutboxRegistered() {
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
-        final InMemoryPublisher publisher = new InMemoryPublisher();
 
         testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new MultiPayloadTransactionalHandler());
-        }, tm, publisher, null);
+        }, tm);
         final TestClient client = testClientAndServer.client();
 
         final TestHttpResponse response = client.post(

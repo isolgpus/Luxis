@@ -13,6 +13,7 @@ import io.kiw.luxis.web.http.client.StubLuxisHttpClient;
 import io.kiw.luxis.web.http.client.VertxLuxisHttpClient;
 import io.kiw.luxis.web.internal.RoutesRegister;
 import io.kiw.luxis.web.messaging.EventConsumer;
+import io.kiw.luxis.web.messaging.EventPlatform;
 import io.kiw.luxis.web.messaging.OutboxStore;
 import io.kiw.luxis.web.messaging.Publisher;
 import io.kiw.luxis.web.test.ContextAsserter;
@@ -129,13 +130,71 @@ public class TestApplicationClientCreator {
         };
 
         if (REAL_MODE.equals(mode)) {
-
-            Luxis<MyApplicationState> luxis = Luxis.start(routes, config, databaseClient, publisher, outboxStore, eventConsumer);
+            Luxis<MyApplicationState> luxis = startReal(routes, config, databaseClient, publisher, outboxStore, eventConsumer);
             return new TestClientAndServer(new VertxTestClient("127.0.0.1", config.port()), luxis);
         } else {
-            Luxis<MyApplicationState> luxis = Luxis.test(routes, config, databaseClient, publisher, outboxStore, eventConsumer);
+            Luxis<MyApplicationState> luxis = startTest(routes, config, databaseClient, publisher, outboxStore, eventConsumer);
             return new TestClientAndServer(new StubTestClient("127.0.0.1", config.port(), luxis), luxis);
         }
+    }
 
+    private static Luxis<MyApplicationState> startReal(final ApplicationRoutesRegister<MyApplicationState> routes, final WebServerConfig config, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore, final EventConsumer eventConsumer) {
+        final EventPlatform events = toEventPlatform(publisher, outboxStore, eventConsumer);
+        if (events != null) {
+            return Luxis.start(routes, config, databaseClient, events);
+        }
+        if (databaseClient != null) {
+            return Luxis.start(routes, config, databaseClient);
+        }
+        return Luxis.start(routes, config);
+    }
+
+    private static Luxis<MyApplicationState> startTest(final ApplicationRoutesRegister<MyApplicationState> routes, final WebServerConfig config, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore, final EventConsumer eventConsumer) {
+        final EventPlatform events = toEventPlatform(publisher, outboxStore, eventConsumer);
+        if (events != null) {
+            return Luxis.test(routes, config, databaseClient, events);
+        }
+        if (databaseClient != null) {
+            return Luxis.test(routes, config, databaseClient);
+        }
+        return Luxis.test(routes, config);
+    }
+
+    private static EventPlatform toEventPlatform(final Publisher publisher, final OutboxStore<?> outboxStore, final EventConsumer eventConsumer) {
+        if (publisher == null && outboxStore == null && eventConsumer == null) {
+            return null;
+        }
+        if (publisher == null || outboxStore == null) {
+            throw new IllegalArgumentException(
+                    "Mode 3 requires both Publisher and OutboxStore. Use the database-only overload to test scenarios without an event platform.");
+        }
+        return EventPlatform.of(publisher, outboxStore, eventConsumer != null ? eventConsumer : NoopEventConsumer.INSTANCE);
+    }
+
+    private static final class NoopEventConsumer implements EventConsumer {
+        static final NoopEventConsumer INSTANCE = new NoopEventConsumer();
+
+        @Override
+        public String topic() {
+            return "__noop__";
+        }
+
+        @Override
+        public String extractKey(final java.nio.ByteBuffer message) {
+            return null;
+        }
+
+        @Override
+        public <T> T decode(final java.nio.ByteBuffer message, final Class<T> type) {
+            return null;
+        }
+
+        @Override
+        public void start(final io.kiw.luxis.web.messaging.EventDispatcher dispatcher) {
+        }
+
+        @Override
+        public void close() {
+        }
     }
 }

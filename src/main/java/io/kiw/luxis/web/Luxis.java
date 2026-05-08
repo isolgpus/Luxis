@@ -13,6 +13,7 @@ import io.kiw.luxis.web.internal.VertxExecutionDispatcher;
 import io.kiw.luxis.web.internal.VertxRoutesRegistrar;
 import io.kiw.luxis.web.internal.VertxTimeoutScheduler;
 import io.kiw.luxis.web.messaging.EventConsumer;
+import io.kiw.luxis.web.messaging.EventPlatform;
 import io.kiw.luxis.web.messaging.OutboxStore;
 import io.kiw.luxis.web.messaging.Publisher;
 import io.kiw.luxis.web.test.StubExecutionDispatcher;
@@ -28,37 +29,48 @@ import java.util.function.Consumer;
 
 public interface Luxis<APP> extends AutoCloseable {
 
+    // ---------------------------------------------------------------------
+    // Mode 1: web only
+    // ---------------------------------------------------------------------
 
     static <APP> Luxis<APP> start(final ApplicationRoutesRegister<APP> routesRegisterConsumer) {
-        return start(routesRegisterConsumer, new WebServiceConfigBuilder().build());
+        return startInternal(routesRegisterConsumer, new WebServiceConfigBuilder().build(), null, null);
     }
 
     static <APP> Luxis<APP> start(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final WebServerConfig webServerConfig) {
-        return start(routesRegisterConsumer, webServerConfig, null, null, null);
+        return startInternal(routesRegisterConsumer, webServerConfig, null, null);
     }
 
+    // ---------------------------------------------------------------------
+    // Mode 2: web + database
+    // ---------------------------------------------------------------------
+
     static <APP> Luxis<APP> start(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final DatabaseClient<?, ?, ?> databaseClient) {
-        return start(routesRegisterConsumer, new WebServiceConfigBuilder().build(), databaseClient, null, null);
+        return startInternal(routesRegisterConsumer, new WebServiceConfigBuilder().build(), databaseClient, null);
     }
 
     static <APP> Luxis<APP> start(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final WebServerConfig webServerConfig, final DatabaseClient<?, ?, ?> databaseClient) {
-        return start(routesRegisterConsumer, webServerConfig, databaseClient, null, null);
+        return startInternal(routesRegisterConsumer, webServerConfig, databaseClient, null);
     }
 
-    static <APP> Luxis<APP> start(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore) {
-        return start(routesRegisterConsumer, new WebServiceConfigBuilder().build(), databaseClient, publisher, outboxStore, null);
-    }
-
-    static <APP> Luxis<APP> start(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore, final EventConsumer eventConsumer) {
-        return start(routesRegisterConsumer, new WebServiceConfigBuilder().build(), databaseClient, publisher, outboxStore, eventConsumer);
-    }
-
-    static <APP> Luxis<APP> start(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final WebServerConfig webServerConfig, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore) {
-        return start(routesRegisterConsumer, webServerConfig, databaseClient, publisher, outboxStore, null);
-    }
+    // ---------------------------------------------------------------------
+    // Mode 3: web + database + event platform (publisher + outbox + consumer)
+    // ---------------------------------------------------------------------
 
     // A Luxis instance supports a single EventConsumer (one topic) by design — event ordering across multiple consumers would not be deterministic.
-    static <APP> Luxis<APP> start(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final WebServerConfig webServerConfig, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore, final EventConsumer eventConsumer) {
+    static <APP> Luxis<APP> start(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final DatabaseClient<?, ?, ?> databaseClient, final EventPlatform eventPlatform) {
+        return startInternal(routesRegisterConsumer, new WebServiceConfigBuilder().build(), databaseClient, eventPlatform);
+    }
+
+    static <APP> Luxis<APP> start(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final WebServerConfig webServerConfig, final DatabaseClient<?, ?, ?> databaseClient, final EventPlatform eventPlatform) {
+        return startInternal(routesRegisterConsumer, webServerConfig, databaseClient, eventPlatform);
+    }
+
+    private static <APP> Luxis<APP> startInternal(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final WebServerConfig webServerConfig, final DatabaseClient<?, ?, ?> databaseClient, final EventPlatform eventPlatform) {
+        final Publisher publisher = eventPlatform == null ? null : eventPlatform.publisher();
+        final OutboxStore<?> outboxStore = eventPlatform == null ? null : eventPlatform.outboxStore();
+        final EventConsumer eventConsumer = eventPlatform == null ? null : eventPlatform.eventConsumer();
+
         final Vertx vertx = Vertx.vertx();
         final HttpServer httpServer = vertx.createHttpServer();
         final Router router = Router.router(vertx);
@@ -94,36 +106,48 @@ public interface Luxis<APP> extends AutoCloseable {
     }
 
 
-    public static <APP> TestLuxis<APP> test(final ApplicationRoutesRegister<APP> routesRegisterConsumer) {
-        return test(routesRegisterConsumer, (DatabaseClient<?, ?, ?>) null);
-    }
+    // ---------------------------------------------------------------------
+    // Mode 1: web only (test)
+    // ---------------------------------------------------------------------
 
-    public static <APP> TestLuxis<APP> test(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final DatabaseClient<?, ?, ?> databaseClient) {
-        return test(routesRegisterConsumer, new WebServiceConfigBuilder().build(), databaseClient, null, null);
+    public static <APP> TestLuxis<APP> test(final ApplicationRoutesRegister<APP> routesRegisterConsumer) {
+        return testInternal(routesRegisterConsumer, new WebServiceConfigBuilder().build(), null, null);
     }
 
     public static <APP> TestLuxis<APP> test(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final WebServerConfig webServerConfig) {
-        return test(routesRegisterConsumer, webServerConfig, null, null, null);
+        return testInternal(routesRegisterConsumer, webServerConfig, null, null);
+    }
+
+    // ---------------------------------------------------------------------
+    // Mode 2: web + database (test)
+    // ---------------------------------------------------------------------
+
+    public static <APP> TestLuxis<APP> test(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final DatabaseClient<?, ?, ?> databaseClient) {
+        return testInternal(routesRegisterConsumer, new WebServiceConfigBuilder().build(), databaseClient, null);
     }
 
     public static <APP> TestLuxis<APP> test(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final WebServerConfig webServerConfig, final DatabaseClient<?, ?, ?> databaseClient) {
-        return test(routesRegisterConsumer, webServerConfig, databaseClient, null, null);
+        return testInternal(routesRegisterConsumer, webServerConfig, databaseClient, null);
     }
 
-    public static <APP> TestLuxis<APP> test(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore) {
-        return test(routesRegisterConsumer, new WebServiceConfigBuilder().build(), databaseClient, publisher, outboxStore, null);
+    // ---------------------------------------------------------------------
+    // Mode 3: web + database + event platform (test)
+    // ---------------------------------------------------------------------
+
+    public static <APP> TestLuxis<APP> test(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final DatabaseClient<?, ?, ?> databaseClient, final EventPlatform eventPlatform) {
+        return testInternal(routesRegisterConsumer, new WebServiceConfigBuilder().build(), databaseClient, eventPlatform);
     }
 
-    public static <APP> TestLuxis<APP> test(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore, final EventConsumer eventConsumer) {
-        return test(routesRegisterConsumer, new WebServiceConfigBuilder().build(), databaseClient, publisher, outboxStore, eventConsumer);
-    }
-
-    public static <APP> TestLuxis<APP> test(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final WebServerConfig webServerConfig, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore) {
-        return test(routesRegisterConsumer, webServerConfig, databaseClient, publisher, outboxStore, null);
+    public static <APP> TestLuxis<APP> test(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final WebServerConfig webServerConfig, final DatabaseClient<?, ?, ?> databaseClient, final EventPlatform eventPlatform) {
+        return testInternal(routesRegisterConsumer, webServerConfig, databaseClient, eventPlatform);
     }
 
     @SuppressWarnings("unchecked")
-    public static <APP> TestLuxis<APP> test(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final WebServerConfig webServerConfig, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore, final EventConsumer eventConsumer) {
+    private static <APP> TestLuxis<APP> testInternal(final ApplicationRoutesRegister<APP> routesRegisterConsumer, final WebServerConfig webServerConfig, final DatabaseClient<?, ?, ?> databaseClient, final EventPlatform eventPlatform) {
+        final Publisher publisher = eventPlatform == null ? null : eventPlatform.publisher();
+        final OutboxStore<?> outboxStore = eventPlatform == null ? null : eventPlatform.outboxStore();
+        final EventConsumer eventConsumer = eventPlatform == null ? null : eventPlatform.eventConsumer();
+
         final Consumer<Exception>[] ref = new Consumer[] {webServerConfig.exceptionHandler};
         final TimeInjector timeInjector = new TimeInjector();
 

@@ -18,7 +18,6 @@ import io.kiw.luxis.web.messaging.EventPlatform;
 import io.kiw.luxis.web.messaging.OutboxStore;
 import io.kiw.luxis.web.messaging.Publisher;
 import io.kiw.luxis.web.test.ContextAsserter;
-import io.kiw.luxis.web.test.LuxisTest;
 import io.kiw.luxis.web.test.MyApplicationState;
 import io.kiw.luxis.web.test.StubContextAsserter;
 import io.kiw.luxis.web.test.StubTestClient;
@@ -134,10 +133,10 @@ public class TestApplicationClientCreator {
 
         final LuxisBuilder<MyApplicationState> luxisBuilder = Luxis.app(routes).withConfig(config).withDatabase(databaseClient).withEventPlatform(events);
         if (REAL_MODE.equals(mode)) {
-            Luxis<MyApplicationState> luxis = luxisBuilder.start();
+            final Luxis<MyApplicationState> luxis = luxisBuilder.start();
             return new TestClientAndServer(new VertxTestClient("127.0.0.1", config.port()), luxis);
         } else {
-            Luxis<MyApplicationState> luxis = LuxisTest.from(luxisBuilder);
+            final Luxis<MyApplicationState> luxis = TestLuxis.from(luxisBuilder);
             return new TestClientAndServer(new StubTestClient("127.0.0.1", config.port(), luxis), luxis);
         }
     }

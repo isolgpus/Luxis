@@ -181,7 +181,7 @@ public class ChatWebSocketRoutes extends WebSocketRoutes<AppState, ChatResponse>
 
 ## Testing WebSockets
 
-WebSocket testing works the same way as HTTP — in-memory with `Luxis.app(routes).test()`, or against a real server with `Luxis.app(routes).start()`:
+WebSocket testing works the same way as HTTP — in-memory with `LuxisTest.from(Luxis.app(routes))`, or against a real server with `Luxis.app(routes).start()`. The `LuxisTest` factory and stub clients ship in `luxis-test-support` (see the [testing guide](../testing/) for the dependency block):
 
 ```java
 public class ChatWebSocketTest {
@@ -192,7 +192,7 @@ public class ChatWebSocketTest {
 
     @Before
     public void setUp() {
-        luxis = Luxis.app(MyApp::registerRoutes).test();
+        luxis = LuxisTest.from(Luxis.app(MyApp::registerRoutes));
         client = new StubTestClient("127.0.0.1", 8080, luxis);
     }
 

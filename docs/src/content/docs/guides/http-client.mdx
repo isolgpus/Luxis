@@ -72,15 +72,17 @@ Result<HttpErrorResponse, HttpClientResponse<String>> result =
 
 ### In-memory (stub)
 
-Point the stub client at another `Luxis.app(routes).test()` instance. Requests execute in-process with no network:
+Point the stub client at another `LuxisTest.from(...)` instance. Requests execute in-process with no network:
 
 ```java
 // The service you want to call
-Luxis<UserState> userService = Luxis.app(UserApp::registerRoutes).test();
+TestLuxis<UserState> userService = LuxisTest.from(Luxis.app(UserApp::registerRoutes));
 
 // Create a client that talks to it in-memory
 LuxisHttpClient httpClient = StubLuxisHttpClient.create(userService);
 ```
+
+`LuxisTest` and `StubLuxisHttpClient` are part of `luxis-test-support`. See the [testing guide](../testing/) for the dependency block.
 
 ### Real HTTP (Vert.x)
 
@@ -130,14 +132,14 @@ public class CreateOrderHandler implements JsonHandler<OrderRequest, OrderRespon
 In tests, wire up the stub:
 
 ```java
-Luxis<UserState> userService = Luxis.app(UserApp::registerRoutes).test();
+TestLuxis<UserState> userService = LuxisTest.from(Luxis.app(UserApp::registerRoutes));
 LuxisHttpClient httpClient = StubLuxisHttpClient.create(userService);
 
-Luxis<AppState> orderService = Luxis.<AppState>app(r -> {
+TestLuxis<AppState> orderService = LuxisTest.from(Luxis.<AppState>app(r -> {
     AppState state = new AppState();
     r.jsonRoute("/orders", Method.POST, state, OrderRequest.class, new CreateOrderHandler(httpClient));
     return state;
-}).test();
+}));
 ```
 
 Both services run in-memory. The order service calls the user service through the stub client — no network, no Docker, milliseconds.

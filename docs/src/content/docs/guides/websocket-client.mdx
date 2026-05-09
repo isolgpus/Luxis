@@ -64,6 +64,6 @@ session.send(request);
 
 ## Stub vs. real
 
-WebSocket clients honour the same stub-or-real split as the rest of the HTTP client. `StubLuxisHttpClient` connects to the target `Luxis.app(routes).test()` instance in-process with no network, while `VertxLuxisHttpClient` opens a real WebSocket — the client code is identical either way.
+WebSocket clients honour the same stub-or-real split as the rest of the HTTP client. `StubLuxisHttpClient` connects to the target `LuxisTest.from(Luxis.app(routes))` instance in-process with no network, while `VertxLuxisHttpClient` opens a real WebSocket — the client code is identical either way.
 
 See the [WebSockets guide](/Luxis/guides/websockets/) for the full reference on pipelines, lifecycle hooks, validation, error handling, and configuration — everything there applies on the client side too.

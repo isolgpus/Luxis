@@ -6,10 +6,10 @@
 
     <groupId>io.kiw.luxis</groupId>
     <artifactId>luxis-parent</artifactId>
-    <version>0.5.0</version>
+    <version>0.5.2</version>
     <packaging>pom</packaging>
 
-    <name>Luxis Parent</name>
+    <name>Luxi# Parent</name>
     <description>Reactor parent for the Luxis web framework</description>
     <url>https://github.com/isolgpus/Luxis</url>
 
@@ -186,5 +186,15 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+            </plugin>
+        </plugins>
     </build>
 </project>

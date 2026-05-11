@@ -13,11 +13,11 @@ Luxis ships an event-outbox messaging layer (see https://isolgpus.github.io/Luxi
 package io.kiw.luxis.web.messaging;
 
 public interface Publisher {
-    Future<Void> publish(List<OutboxEvent> events);
+    Future<Void> publish(List<PendingOutboxEvent> events);
 }
 ```
 
-`Future` is `io.vertx.core.Future`. One method. Called by the drainer once per batch, and by the in-pipeline `AsyncPublisher` once per immediate (non-transactional) `publish(...)` call wrapped in a single-element list.
+`Future` is `io.vertx.core.Future`. One method. Called by the drainer once per batch, and by the in-pipeline `AsyncPublisher` once per immediate (non-transactional) `publish(...)` call wrapped in a single-element list. Each `PendingOutboxEvent` is `(long id, OutboxEvent event)` — `id` is the persisted outbox row id, `event` carries the `key` and sealed `payload`.
 
 ## The contract — non-negotiable
 
@@ -38,6 +38,7 @@ These rules are how Luxis's at-least-once guarantee and dedup story stay sound. 
 package com.example.luxis.broker;
 
 import io.kiw.luxis.web.messaging.OutboxEvent;
+import io.kiw.luxis.web.messaging.PendingOutboxEvent;
 import io.kiw.luxis.web.messaging.Publisher;
 import io.vertx.core.Future;
 
@@ -55,26 +56,28 @@ public final class MyBrokerPublisher implements Publisher, AutoCloseable {
     }
 
     @Override
-    public Future<Void> publish(final List<OutboxEvent> events) {
+    public Future<Void> publish(final List<PendingOutboxEvent> events) {
         if (events.isEmpty()) {
             return Future.succeededFuture();
         }
 
         final List<Future<?>> sends = new ArrayList<>(events.size());
-        for (final OutboxEvent event : events) {
-            sends.add(sendOne(event));
+        for (final PendingOutboxEvent pending : events) {
+            sends.add(sendOne(pending));
         }
         return Future.all(sends).mapEmpty();
     }
 
-    private Future<?> sendOne(final OutboxEvent event) {
+    private Future<?> sendOne(final PendingOutboxEvent pending) {
+        final OutboxEvent event = pending.event();
         final byte[] payload = switch (event.payload()) {
             case OutboxEvent.Payload.Str s   -> s.value().getBytes(StandardCharsets.UTF_8);
             case OutboxEvent.Payload.Bytes b -> b.value();
             case OutboxEvent.Payload.Buf b   -> readBuf(b.value());
         };
         // event.key() is the destination — topic / channel / queue / subject.
-        return client.send(event.key(), payload);
+        // pending.id() is the persisted outbox row id — propagate it as a header / message key prefix for consumer dedup.
+        return client.send(event.key(), payload, pending.id());
     }
 
     private static byte[] readBuf(final ByteBuffer buf) {

@@ -71,7 +71,7 @@ Every `registerInbound` handler is a pipeline — the same one you use for HTTP.
 | Event loop (`map`, `flatMap`, `asyncMap`, etc.) | `ctx.in()`, `ctx.session()`, `ctx.app()` |
 | Worker (`blockingMap`, `blockingFlatMap`, etc.) | `ctx.in()` |
 
-Unlike HTTP pipelines where `ctx.session()` is available on worker threads, WebSocket pipelines do **not** expose `ctx.session()` in blocking methods. This is because WebSocket write operations (such as sending messages) are not safe to call from a worker thread — they must run on the event loop that owns the connection. HTTP response metadata like headers and cookies can be safely buffered from a worker thread because Vert.x's blocking handler mechanism supports this, but WebSocket writes go directly to the network and must stay on the event loop.
+The blocking context is the same `RestrictedBlockingRouteContext` HTTP handlers see — neither `ctx.session()` nor `ctx.app()` is reachable from a worker thread, and the type system enforces this. WebSocket write operations (such as sending messages) must run on the event loop that owns the connection, so the framework keeps you off the worker for those.
 
 To send a message after a blocking operation, return your result and use `ctx.session()` in a subsequent `map` step, which runs back on the event loop:
 
@@ -147,13 +147,13 @@ routes.registerInbound("heartbeat", HeartbeatRequest.class, stream ->
 
 ## Splitting handlers into methods
 
-As your WebSocket route grows, extract handlers into separate methods:
+As your WebSocket route grows, extract handlers into separate methods. WebSocket pipelines are built on `LuxisStream` and terminate in a `LuxisPipeline`, the same types HTTP and event-route pipelines use — there is no dedicated `WebSocketStream` / `WebSocketPipeline`:
 
 ```java
 public class ChatWebSocketRoutes extends WebSocketRoutes<AppState, ChatResponse> {
 
-    private WebSocketPipeline<MessageResponse> handleSendMessage(
-            WebSocketStream<SendMessageRequest, AppState, ChatResponse> stream) {
+    private LuxisPipeline<MessageResponse> handleSendMessage(
+            LuxisStream<SendMessageRequest, AppState, ChatResponse, ErrorMessageResponse, WebSocketSession<ChatResponse>> stream) {
         return stream
                 .map(this::addToHistory)
                 .blockingMap(this::persistToDatabase)
@@ -161,8 +161,8 @@ public class ChatWebSocketRoutes extends WebSocketRoutes<AppState, ChatResponse>
                 .complete();
     }
 
-    private WebSocketPipeline<StatusResponse> handleGetStatus(
-            WebSocketStream<StatusRequest, AppState, ChatResponse> stream) {
+    private LuxisPipeline<StatusResponse> handleGetStatus(
+            LuxisStream<StatusRequest, AppState, ChatResponse, ErrorMessageResponse, WebSocketSession<ChatResponse>> stream) {
         return stream
                 .map(ctx -> new StatusResponse(ctx.app().onlineUsers()))
                 .complete();
@@ -181,7 +181,7 @@ public class ChatWebSocketRoutes extends WebSocketRoutes<AppState, ChatResponse>
 
 ## Testing WebSockets
 
-WebSocket testing works the same way as HTTP — in-memory with `LuxisTest.from(Luxis.app(routes))`, or against a real server with `Luxis.app(routes).start()`. The `LuxisTest` factory and stub clients ship in `luxis-test-support` (see the [testing guide](../testing/) for the dependency block):
+WebSocket testing works the same way as HTTP — in-memory with `TestLuxis.from(Luxis.app(routes))`, or against a real server with `Luxis.app(routes).start()`. The `TestLuxis` factory and stub clients ship in `luxis-test-support` (see the [testing guide](../testing/) for the dependency block):
 
 ```java
 public class ChatWebSocketTest {
@@ -192,7 +192,7 @@ public class ChatWebSocketTest {
 
     @Before
     public void setUp() {
-        luxis = LuxisTest.from(Luxis.app(MyApp::registerRoutes));
+        luxis = TestLuxis.from(Luxis.app(MyApp::registerRoutes));
         client = new StubTestClient("127.0.0.1", 8080, luxis);
     }
 
@@ -246,12 +246,12 @@ Customise WebSocket behaviour with `WebSocketRouteConfigBuilder`:
 ```java
 routesRegister.webSocketRoute("/ws/chat", state, new ChatWebSocketRoutes(),
     new WebSocketRouteConfigBuilder()
-        .setCorruptInputStrategy(new SendErrorResponse("Bad message format"))
-        .setFailedValidationStrategy(JustSendValidationError.INSTANCE)
-        .setBackpressureStrategy(BackpressureStrategy.DISCONNECT_CLIENT)
+        .corruptInputStrategy(new SendErrorResponse("Bad message format"))
+        .failedValidationStrategy(JustSendValidationError.INSTANCE)
+        .backpressureStrategy(BackpressureStrategy.DISCONNECT_CLIENT)
         .build());
 ```
 
-- **Corrupt input** — what happens when the client sends invalid JSON or an unknown `type`. Default: disconnect.
-- **Failed validation** — what happens when validation fails. Default: send the validation errors and keep the connection open.
-- **Backpressure** — what happens when the write queue is full. Default: buffer all the messages.
+- **Corrupt input** — what happens when the client sends invalid JSON or an unknown `type`. Default: `DisconnectSession.INSTANCE` (disconnect).
+- **Failed validation** — what happens when validation fails. Default: `JustSendValidationError.INSTANCE` (send the validation errors and keep the connection open).
+- **Backpressure** — what happens when the write queue is full. Default: `BackpressureStrategy.UNBOUNDED_BUFFER` (buffer all the messages).

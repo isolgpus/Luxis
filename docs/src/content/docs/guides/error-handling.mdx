@@ -1,9 +1,9 @@
 ---
 title: Error Handling
-description: How Result, HttpStream, and WebSocketStream cooperate to produce error responses.
+description: How Result and LuxisStream pipelines cooperate to produce error responses.
 ---
 
-Error handling is the cornerstone of the `HttpStream` / `WebSocketStream` pipeline. Every step in a pipeline evaluates to a `Result` — either a success that continues the pipeline or an error that short-circuits it. There are no exception-based control flow paths in handler code: you either return a success, return an error, or let an unexpected exception bubble out of the handler (which the framework translates into a 500 and hands to your configured exception handler).
+Error handling is the cornerstone of the `LuxisStream` pipeline — the same stream type that powers HTTP handlers (via `HttpStream`), WebSocket inbound handlers, and event routes. Every step in a pipeline evaluates to a `Result` — either a success that continues the pipeline or an error that short-circuits it. There are no exception-based control flow paths in handler code: you either return a success, return an error, or let an unexpected exception bubble out of the handler (which the framework translates into a 500 and hands to your configured exception handler).
 
 ## The Result Contract
 
@@ -60,7 +60,7 @@ Not every pipeline step is allowed to short-circuit. Only the `flatMap`-style st
 | `peek` / `blockingPeek` | `ctx -> void` | No |
 | `flatMap` | `ctx -> Result<HttpErrorResponse, OUT>` | **Yes** |
 | `blockingFlatMap` | `ctx -> Result<HttpErrorResponse, OUT>` | **Yes** |
-| `asyncMap` / `asyncBlockingMap` | `ctx -> LuxisAsync<OUT>` | **Yes** (via the async result) |
+| `asyncMap` / `asyncBlockingMap` | `ctx -> LuxisAsync<OUT, ERR>` | **Yes** (via the async result) |
 | `complete` | `ctx -> Result<HttpErrorResponse, OUT>` | **Yes** |
 | `blockingComplete` | `ctx -> Result<HttpErrorResponse, OUT>` | **Yes** |
 
@@ -129,7 +129,7 @@ Because exceptions become opaque 500s, **prefer returning `HttpResult.error(...)
 
 ## WebSocket Errors
 
-`WebSocketStream` follows exactly the same pattern, with one difference: WebSocket frames have no HTTP status code, so errors are just an `ErrorMessageResponse` — no `HttpErrorResponse` wrapper. Build errors with `WebSocketResult`:
+WebSocket pipelines follow exactly the same pattern, with one difference: WebSocket frames have no HTTP status code, so errors are just an `ErrorMessageResponse` — no `HttpErrorResponse` wrapper. Build errors with `WebSocketResult`:
 
 ```java
 return e

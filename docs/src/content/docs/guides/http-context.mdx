@@ -7,7 +7,7 @@ Use `ctx.session()` to access query parameters, headers, and cookies within any 
 
 ```java
 @Override
-public RequestPipeline<EchoResponse> handle(HttpStream<EchoRequest, MyState> e) {
+public LuxisPipeline<EchoResponse> handle(HttpStream<EchoRequest, MyState> e) {
     return e.complete(ctx -> {
         // Read from request
         String query = ctx.session().getQueryParam("search");

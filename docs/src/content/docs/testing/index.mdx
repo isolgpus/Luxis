@@ -13,7 +13,7 @@ The test harness lives in a separate artifact, `luxis-test-support`. Add it to y
 <dependency>
     <groupId>io.kiw.luxis</groupId>
     <artifactId>luxis-test-support</artifactId>
-    <version>0.5.0</version>
+    <version>0.5.2</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -26,7 +26,7 @@ Everything below comes from the `io.kiw.luxis.web.test` package. Anything you fi
 
 | | In-memory (stub) | Real server (Vert.x) |
 |---|---|---|
-| **Factory** | `LuxisTest.from(Luxis.app(routes))` | `Luxis.app(routes).start()` |
+| **Factory** | `TestLuxis.from(Luxis.app(routes))` | `Luxis.app(routes).start()` |
 | **Speed** | Milliseconds | Seconds |
 | **Network** | None — everything runs in-process | Real HTTP over localhost |
 | **When to use** | Day-to-day development, CI | Final verification, debugging network-level issues |
@@ -35,7 +35,7 @@ Both give you a `TestClient` with the same API. Your test code doesn't know or c
 
 ## Register your routes once
 
-Define your routes in a method. This is the same function your production server calls:
+Define your routes in a method that implements `ApplicationRoutesRegister<APP>`. This is the same function your production server calls:
 
 ```java
 public static MyState registerRoutes(RoutesRegister routesRegister) {
@@ -57,14 +57,14 @@ Luxis.app(MyApp::registerRoutes).start();
 ### In-memory (stub)
 
 ```java
-import io.kiw.luxis.web.test.LuxisTest;
+import io.kiw.luxis.web.test.TestLuxis;
 import io.kiw.luxis.web.test.StubTestClient;
 
-Luxis<MyState> luxis = LuxisTest.from(Luxis.app(MyApp::registerRoutes));
+Luxis<MyState> luxis = TestLuxis.from(Luxis.app(MyApp::registerRoutes));
 TestClient client = new StubTestClient("127.0.0.1", 8080, luxis);
 ```
 
-No server starts. No ports are opened. Your handlers execute synchronously in-process. `LuxisTest.from(...)` accepts the same `LuxisBuilder` you'd configure for production — `.withConfig(...)`, `.withDatabase(...)`, `.withEventPlatform(...)` all work identically before you hand the builder over.
+No server starts. No ports are opened. Your handlers execute synchronously in-process. `TestLuxis.from(...)` accepts the same `LuxisBuilder` you'd configure for production — `.withConfig(...)`, `.withDatabase(...)`, `.withEventPlatform(...)` all work identically before you hand the builder over.
 
 ### Real server (Vert.x)
 
@@ -103,7 +103,7 @@ public class EchoTest {
 
     @Before
     public void setUp() {
-        luxis = LuxisTest.from(Luxis.app(MyApp::registerRoutes));
+        luxis = TestLuxis.from(Luxis.app(MyApp::registerRoutes));
         client = new StubTestClient("127.0.0.1", 8080, luxis);
     }
 
@@ -197,13 +197,13 @@ The in-memory mode extends beyond a single service. You can wire multiple Luxis 
 
 ```java
 // Create the downstream service in-memory
-TestLuxis<DownstreamState> downstream = LuxisTest.from(Luxis.app(DownstreamApp::registerRoutes));
+TestLuxis<DownstreamState> downstream = TestLuxis.from(Luxis.app(DownstreamApp::registerRoutes));
 
 // Create an HTTP client that talks to the downstream service in-memory
 LuxisHttpClient httpClient = StubLuxisHttpClient.create(downstream);
 
 // Create the upstream service, injecting the HTTP client
-TestLuxis<UpstreamState> upstream = LuxisTest.from(Luxis.<UpstreamState>app(r -> {
+TestLuxis<UpstreamState> upstream = TestLuxis.from(Luxis.<UpstreamState>app(r -> {
     UpstreamState state = new UpstreamState();
     r.jsonRoute("/call-next", Method.POST, state, HttpClientGetRequest.class,
         new HttpClientCallHandler(httpClient, "http://127.0.0.1:8091"));
@@ -218,7 +218,7 @@ TestHttpResponse response = client.post(
         .body(json().put("targetPath", "/api/value").toString()));
 ```
 
-In stub mode, all of this runs in-memory. To switch to real HTTP, replace `LuxisTest.from(...)` with `.start()` on the builder and `StubLuxisHttpClient` with `VertxLuxisHttpClient`. The test assertions don't change.
+In stub mode, all of this runs in-memory. To switch to real HTTP, replace `TestLuxis.from(...)` with `.start()` on the builder and `StubLuxisHttpClient` with `VertxLuxisHttpClient`. The test assertions don't change.
 
 ## Exception handling in tests
 

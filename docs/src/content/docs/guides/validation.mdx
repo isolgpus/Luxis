@@ -3,18 +3,23 @@ title: Validation
 description: Declaratively validate JSON fields, query parameters, and path parameters.
 ---
 
-`validate()` evaluates all field rules together and short-circuits with a `422` response if any fail. You can validate JSON body fields, query parameters, and path parameters.
+Luxis exposes two validation entry points:
+
+- **`validate(v -> ...)`** — available on every stream type (HTTP, WebSocket, event). Validates the inbound payload via `v.field(...)` and `v.listField(...)`.
+- **`validateHttp(v -> ...)`** — available only on `HttpStream` (HTTP handlers and filters). Adds `v.queryParam(...)` and `v.pathParam(...)` on top of the base field rules.
+
+Both evaluate all rules in a block together and short-circuit with a `422` response if any fail.
 
 ## Pipeline Position
 
-`validate()` is only available on `HttpStream` — the stream type you receive at the start of a handler. As soon as you call any transformation step (`map`, `flatMap`, `blockingMap`, `blockingFlatMap`, `asyncMap`, …), the stream is downgraded to an `HttpMapStream`, which does not expose `validate()`.
+`validateHttp()` is only available on `HttpStream` — the stream type you receive at the start of an HTTP handler or filter. As soon as you call any transformation step (`map`, `flatMap`, `blockingMap`, `blockingFlatMap`, `asyncMap`, …), the stream type widens to `LuxisStream` and `validateHttp()` is no longer accessible. The base `validate()` still works after transformations, but it cannot reach query or path parameters because it has no `HttpSession`.
 
-In practice this means **validation must run before any other pipeline step**. It can only be used on the first step(s) of the pipeline. You may chain multiple `validate()` calls together, and you may combine them with `requireJwt()`, but once you transform the request you can no longer add validation.
+In practice this means **HTTP-aware validation must run before any other pipeline step**. You may chain multiple `validateHttp()` calls together, and you may combine them with `requireJwt()`, but once you transform the request you can no longer use `validateHttp()`.
 
 ```java
-// OK — validate() is the first step
+// OK — validateHttp() is the first step
 return e
-    .validate(v -> {
+    .validateHttp(v -> {
         v.field("name", r -> r.name).required().minLength(2);
         v.field("email", r -> r.email).required().email();
     })
@@ -23,28 +28,28 @@ return e
 ```
 
 ```java
-// Also OK — validate() after requireJwt() (both live on HttpStream)
+// Also OK — validateHttp() after requireJwt() (both live on HttpStream)
 return e
     .requireJwt(jwtProvider)
-    .validate(v -> v.field("name", r -> r.name).required())
+    .validateHttp(v -> v.field("name", r -> r.name).required())
     .map(ctx -> buildUser(ctx.in()))
     .complete(ctx -> HttpResult.success(ctx.in()));
 ```
 
 ```java
-// Does not compile — validate() is not defined on HttpMapStream
+// Does not compile — once you map, the stream is no longer an HttpStream
 return e
     .map(ctx -> ctx.in())
-    .validate(v -> v.field("name", r -> r.name).required()) // compile error
+    .validateHttp(v -> v.field("name", r -> r.name).required()) // compile error
     .complete(ctx -> HttpResult.success(ctx.in()));
 ```
 
 ## Basic Validation
 
-Inside a `validate()` block, use `field()` for body fields, `queryParam()` for query string parameters, and `pathParam()` for path parameters:
+Inside a `validateHttp()` block, use `field()` for body fields, `queryParam()` for query string parameters, and `pathParam()` for path parameters:
 
 ```java
-.validate(v -> {
+.validateHttp(v -> {
     v.field("name", r -> r.name).required().minLength(2);
     v.field("email", r -> r.email).required().email();
     v.field("age", r -> r.age).required().min(0).max(150);
@@ -52,6 +57,8 @@ Inside a `validate()` block, use `field()` for body fields, `queryParam()` for q
     v.pathParam("userId").required().matches("[0-9]+");
 })
 ```
+
+The base `validate()` block has the same shape but exposes only `field()` and `listField()` — there is no `HttpSession` available, so query and path parameters cannot be validated through it.
 
 ## Nested Objects
 

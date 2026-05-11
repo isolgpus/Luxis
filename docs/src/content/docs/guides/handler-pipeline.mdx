@@ -11,7 +11,7 @@ This pipeline validates input, updates application state, checks a database, wri
 
 ```java
 return stream
-    .validate(v -> {
+    .validateHttp(v -> {
         v.field("name", r -> r.name).required().minLength(2);
         v.field("email", r -> r.email).required().email();
     })
@@ -69,9 +69,9 @@ Kicks off asynchronous operations (HTTP calls to other services, Kafka publishes
 | `complete` | Event loop |
 | `blockingComplete` | Worker |
 
-### validate — declarative field validation
+### validate / validateHttp — declarative field validation
 
-`validate` runs on the event loop and short-circuits with a `422` response if any rules fail. See [Validation](/Luxis/guides/validation/) for details.
+`validate` and `validateHttp` run on the event loop and short-circuit with a `422` response if any rules fail. Use `validateHttp` from a handler to validate body fields, query parameters, and path parameters. `validate` is the base form available on every stream type (HTTP, WebSocket, event) and validates body fields only. See [Validation](/Luxis/guides/validation/) for details.
 
 ## The flat pattern
 
@@ -94,6 +94,6 @@ Without `flat`, the step simply transforms the value and continues. If something
 | Thread | Available context |
 |---|---|
 | Event loop (`map`, `flatMap`, `asyncMap`, etc.) | `ctx.in()`, `ctx.session()`, `ctx.app()` |
-| Worker (`blockingMap`, `blockingFlatMap`, etc.) | `ctx.in()`, `ctx.session()` |
+| Worker (`blockingMap`, `blockingFlatMap`, etc.) | `ctx.in()` |
 
-Application state (`ctx.app()`) is only available on the event loop. This isn't a convention — it's a compile-time constraint. The type system won't let you access shared state from a worker thread.
+Application state (`ctx.app()`) and the session (`ctx.session()`) are only available on the event loop. This isn't a convention — it's a compile-time constraint. The blocking context is a `RestrictedBlockingRouteContext` that exposes only `in()`, so the type system won't let you reach shared state or the session from a worker thread. If you need to read or write the session after a blocking step, return your value and use `ctx.session()` in a subsequent event-loop step.

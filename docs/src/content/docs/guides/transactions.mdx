@@ -3,7 +3,7 @@ title: Transactions
 description: Run a sub-chain of pipeline steps inside a managed transaction, with commit, rollback, and post-commit hooks.
 ---
 
-Pipelines can open a transaction around a sub-chain of steps. Luxis orchestrates the lifecycle — `begin`, `commit`, `rollback`, `onCommitted` — but stays out of the driver itself. You supply a `TransactionManager`, and your async driver calls (JDBC via a worker, R2DBC, Vert.x SQL client) run inside the managed window.
+Pipelines can open a transaction around a sub-chain of steps. Luxis orchestrates the lifecycle — `begin`, `commit`, `rollback`, `onCommitted` — but stays out of the driver itself. You supply a `DatabaseClient`, and your async driver calls (JDBC via a worker, R2DBC, Vert.x SQL client) run inside the managed window.
 
 ## Shape
 
@@ -27,12 +27,12 @@ Inside `inTransaction(...)`:
 - `map` / `flatMap` — sync transforms on the event loop (same semantics as the outer pipeline).
 - `asyncMap` — returns Vert.x `Future<T>`. This is the one coupling point: your driver's async calls adapt to `Future`.
 - `peek` — side effect without transformation.
-- `onCompletion(ctx -> ...)` — registers a post-commit callback. Fires via `TransactionManager.onCommitted`; does **not** fire on rollback.
+- `onCompletion(ctx -> ...)` — registers a post-commit callback. Fires via `DatabaseClient.onCommitted`; does **not** fire on rollback.
 - `commit()` — closes the sub-chain. Required.
 
 Only these operations are available inside the sub-chain. Blocking steps and arbitrary HTTP / Kafka calls are deliberately excluded — they'd hold a DB connection open on uncontrolled I/O.
 
-## Registering a TransactionManager
+## Registering a DatabaseClient
 
 ```java
 Luxis.app(routes)
@@ -41,10 +41,10 @@ Luxis.app(routes)
     .start();
 ```
 
-`TransactionManager<TX>` is a four-method SPI:
+`DatabaseClient<TX, ROW, KEY>` is the driver SPI. The transaction methods are:
 
 ```java
-public interface TransactionManager<TX> {
+public interface DatabaseClient<TX, ROW, KEY> {
     Future<TX> begin();
     Future<Void> commit(TX tx);
     Future<Void> rollback(TX tx);
@@ -52,21 +52,19 @@ public interface TransactionManager<TX> {
         callback.run();
         return Future.succeededFuture();
     }
+    // …query / update / updateBatch methods omitted
 }
 ```
 
-`TX` is whatever token your driver needs to identify a transaction — a connection, a session, a correlation id. Luxis hands it back to you verbatim on `commit` / `rollback` / `onCommitted`.
+`TX` is whatever token your driver needs to identify a transaction — a connection, a session, a correlation id. Luxis hands it back to you verbatim on `commit` / `rollback` / `onCommitted`. `ROW` and `KEY` parameterise the row type and generated-key type for the query and update methods on the same interface.
 
-Calling `.inTransaction(...)` on a route without a `TransactionManager` registered fails at **route registration time**, not at request time.
+Calling `.inTransaction(...)` on a route without a `DatabaseClient` registered fails at **route registration time**, not at request time.
 
-## TX-to-driver binding is yours
+## TX access inside the sub-chain
 
-Luxis never sees your driver. It only calls `begin` / `commit` / `rollback` and drives the sub-chain. Your `asyncMap` bodies need to see "the current TX" somehow — Luxis leaves that to you:
+Luxis threads the active `TX` through the transactional context. Inside `inTransaction`, `ctx.db()` returns a `DbAccessor` bound to the current transaction, so your `asyncMap` bodies can issue queries and updates through the driver without manually tracking the `TX`. The same `DatabaseClient.begin` / `commit` / `rollback` lifecycle Luxis drives is what makes that token available.
 
-- Stash the TX in a Vert.x context-local inside `begin()`, read it in your driver calls, clear it in `commit`/`rollback`.
-- Or close over the TX via a `ScopedValue` / `ThreadLocal` you manage yourself.
-
-Whatever the user arrangement, keep it consistent with the thread your driver expects.
+If you need raw access to the `TX` outside of the supplied accessor (for example, to call a driver-specific API), stash it from your `DatabaseClient.begin()` implementation onto a Vert.x context-local or a `ScopedValue` you manage, and clear it from `commit` / `rollback`. Keep that arrangement consistent with the thread your driver expects.
 
 ## `Future<T>` is the async primitive
 

@@ -153,7 +153,7 @@ Luxis.app(routes)
     .start();
 ```
 
-The same `EventPlatform` registers the publish side (`Publisher` + `OutboxStore`) and the consume side (`EventConsumer`). All three are optional within the platform — register only the sides you use.
+The same `EventPlatform` registers the publish side (`Publisher` + `OutboxStore`) and the consume side (`EventConsumer`). `EventPlatform.of(publisher, outboxStore, eventConsumer)` requires all three to be non-null — if a service only publishes or only consumes, supply no-op implementations for the unused side rather than passing `null`.
 
 ## Error semantics
 

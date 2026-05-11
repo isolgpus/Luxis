@@ -5,15 +5,15 @@ description: Handle file uploads and downloads with typed routes.
 
 ## File Upload
 
-Upload routes receive a `Map<String, Buffer>` of uploaded files:
+Upload routes extend `FileUploadRoute` and receive a `Map<String, HttpBuffer>` of uploaded files keyed by form-field name:
 
 ```java
 public class UploadHandler extends FileUploadRoute<UploadResponse, MyState> {
 
     @Override
-    public RequestPipeline<UploadResponse> handle(HttpStream<Map<String, Buffer>, MyState> e) {
+    public LuxisPipeline<UploadResponse> handle(HttpStream<Map<String, HttpBuffer>, MyState> e) {
         return e.complete(ctx -> {
-            int totalBytes = ctx.in().values().stream().mapToInt(b -> b.getBytes().length).sum();
+            int totalBytes = ctx.in().values().stream().mapToInt(b -> b.bytes().length).sum();
             return HttpResult.success(new UploadResponse(totalBytes));
         });
     }
@@ -28,15 +28,15 @@ routesRegister.uploadFileRoute("/upload", Method.POST, appState, new UploadHandl
 
 ## File Download
 
-Download routes return a `DownloadFileResponse`:
+Download routes return a `DownloadFileResponse`, which wraps an `HttpBuffer` body and a filename:
 
 ```java
 public class DownloadHandler implements FileDownloadRoute<String, MyState> {
 
     @Override
-    public RequestPipeline<DownloadFileResponse> handle(HttpStream<String, MyState> e) {
+    public LuxisPipeline<DownloadFileResponse> handle(HttpStream<String, MyState> e) {
         return e.complete(ctx ->
-            HttpResult.success(new DownloadFileResponse(Buffer.buffer("file contents"), "report.csv")));
+            HttpResult.success(new DownloadFileResponse(HttpBuffer.fromString("file contents"), "report.csv")));
     }
 }
 ```

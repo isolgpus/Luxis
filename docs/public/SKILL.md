@@ -1,6 +1,6 @@
 ---
 name: luxis
-description: Use when working with the Luxis web framework for Java. Triggers on imports from `io.kiw.luxis`, usage of `HttpStream`, `JsonHandler`, `JsonFilter`, `Luxis.app`, `RequestPipeline`, `HttpResult`, or when the user asks about building or testing a Luxis application.
+description: Use when working with the Luxis web framework for Java. Triggers on imports from `io.kiw.luxis`, usage of `HttpStream`, `JsonHandler`, `JsonFilter`, `Luxis.app`, `LuxisPipeline`, `HttpResult`, or when the user asks about building or testing a Luxis application.
 ---
 
 # Luxis
@@ -15,27 +15,27 @@ These are non-negotiable and the compiler will enforce most of them. Follow them
 - **Blocking I/O** (JDBC, file reads, synchronous HTTP) must use a `blocking*` variant. Never block the event loop.
 - **Async I/O** (Vert.x HTTP client, Kafka, anything returning a `Future`) uses `asyncMap` / `asyncFlatMap` — these stay on the event loop.
 - **Error handling** in the pipeline uses `HttpResult.error(ErrorStatusCode, body)` returned from a `flatMap` / `blockingFlatMap` / `asyncFlatMap` step. Do not throw for expected error cases — throwing is reserved for unexpected failures and produces a `500`.
-- **Validation** uses the declarative `validate(v -> …)` step. It aggregates all failures and short-circuits with a `422`. Do not hand-roll validation in `map` steps.
+- **Validation** uses the declarative `validateHttp(v -> …)` step on HTTP handlers and filters (it adds `queryParam` / `pathParam` on top of the field rules); on WebSocket inbound handlers and event routes, use `validate(v -> …)`. Both aggregate all failures and short-circuit with a `422`. Do not hand-roll validation in `map` steps.
 - **Tests** go through `TestClient`. The same test code works against `StubTestClient` (in-memory, for fast unit tests) and `VertxTestClient` (real HTTP server, for end-to-end). Treat the server as a black box — only assert behaviour observable from the client. The only exception is asserting the exception handler was called.
 
 ## Pipeline cheat sheet
 
 ```java
 return stream
-    .validate(v -> {
-        v.jsonField("name", r -> r.name).required().minLength(2);
-        v.jsonField("email", r -> r.email).required().email();
+    .validateHttp(v -> {
+        v.field("name", r -> r.name).required().minLength(2);
+        v.field("email", r -> r.email).required().email();
     })
     .map(this::readFromAppState)                     // event loop, app state OK
     .blockingFlatMap(this::queryDatabase)            // worker thread, can return HttpResult.error
-    .asyncMap(this::callDownstreamService)           // event loop, returns Future
+    .asyncMap(this::callDownstreamService)           // event loop, returns LuxisAsync
     .complete(this::toResponse);                     // terminal, produces the response
 ```
 
 - `map` / `flatMap` — event loop; `flat*` variants can short-circuit with `HttpResult.error`.
-- `blockingMap` / `blockingFlatMap` — worker thread for synchronous I/O; no app state.
-- `asyncMap` / `asyncFlatMap` — event loop; returns a `Future`.
-- `asyncBlockingMap` / `asyncBlockingFlatMap` — worker thread; returns a `Future`.
+- `blockingMap` / `blockingFlatMap` — worker thread for synchronous I/O; no app state, no session.
+- `asyncMap` / `asyncFlatMap` — event loop; returns a `LuxisAsync<T, ERR>`.
+- `asyncBlockingMap` / `asyncBlockingFlatMap` — worker thread; returns a `LuxisAsync<T, ERR>`.
 - `complete` / `blockingComplete` — terminal step that produces the response.
 
 ## Documentation

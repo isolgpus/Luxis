@@ -28,16 +28,16 @@ The `asyncMap` step kicks off the HTTP call without blocking the event loop. Whe
 
 ## Building requests
 
-For simple calls, use the convenience methods:
+For simple calls, use the convenience methods. The convenience overloads that take a body accept a JSON `String`:
 
 ```java
 httpClient.get("/api/users", UserResponse.class)
-httpClient.post("/api/users", requestBody)
-httpClient.put("/api/users/123", updatedUser)
-httpClient.delete("/api/users/123")
+httpClient.post("/api/users", requestJson, UserResponse.class)
+httpClient.put("/api/users/123", updatedUserJson, UserResponse.class)
+httpClient.delete("/api/users/123", UserResponse.class)
 ```
 
-For more control, use `HttpClientRequest`:
+For more control, including sending a Java object as the body (which Luxis serialises to JSON for you), use `HttpClientRequest`:
 
 ```java
 httpClient.post(
@@ -49,7 +49,7 @@ httpClient.post(
 
 ## Reading responses
 
-The client returns `LuxisAsync<HttpClientResponse<T>>`. Inside a pipeline's `asyncMap`, the framework unwraps this for you — `ctx.in()` gives you the `HttpClientResponse` directly:
+The client returns `LuxisAsync<HttpClientResponse<T>, HttpErrorResponse>`. Inside a pipeline's `asyncMap`, the framework unwraps this for you — `ctx.in()` gives you the `HttpClientResponse` directly:
 
 ```java
 .asyncMap(ctx -> httpClient.get("/api/value", ValueResponse.class))
@@ -72,17 +72,17 @@ Result<HttpErrorResponse, HttpClientResponse<String>> result =
 
 ### In-memory (stub)
 
-Point the stub client at another `LuxisTest.from(...)` instance. Requests execute in-process with no network:
+Point the stub client at another `TestLuxis.from(...)` instance. Requests execute in-process with no network:
 
 ```java
 // The service you want to call
-TestLuxis<UserState> userService = LuxisTest.from(Luxis.app(UserApp::registerRoutes));
+TestLuxis<UserState> userService = TestLuxis.from(Luxis.app(UserApp::registerRoutes));
 
 // Create a client that talks to it in-memory
 LuxisHttpClient httpClient = StubLuxisHttpClient.create(userService);
 ```
 
-`LuxisTest` and `StubLuxisHttpClient` are part of `luxis-test-support`. See the [testing guide](../testing/) for the dependency block.
+`TestLuxis` and `StubLuxisHttpClient` are part of `luxis-test-support`. See the [testing guide](../testing/) for the dependency block.
 
 ### Real HTTP (Vert.x)
 
@@ -117,7 +117,7 @@ public class CreateOrderHandler implements JsonHandler<OrderRequest, OrderRespon
     }
 
     @Override
-    public RequestPipeline<OrderResponse> handle(HttpStream<OrderRequest, AppState> stream) {
+    public LuxisPipeline<OrderResponse> handle(HttpStream<OrderRequest, AppState> stream) {
         return stream
             .map(this::validateOrder)
             .asyncMap(ctx -> httpClient.get(
@@ -132,10 +132,10 @@ public class CreateOrderHandler implements JsonHandler<OrderRequest, OrderRespon
 In tests, wire up the stub:
 
 ```java
-TestLuxis<UserState> userService = LuxisTest.from(Luxis.app(UserApp::registerRoutes));
+TestLuxis<UserState> userService = TestLuxis.from(Luxis.app(UserApp::registerRoutes));
 LuxisHttpClient httpClient = StubLuxisHttpClient.create(userService);
 
-TestLuxis<AppState> orderService = LuxisTest.from(Luxis.<AppState>app(r -> {
+TestLuxis<AppState> orderService = TestLuxis.from(Luxis.<AppState>app(r -> {
     AppState state = new AppState();
     r.jsonRoute("/orders", Method.POST, state, OrderRequest.class, new CreateOrderHandler(httpClient));
     return state;
@@ -146,7 +146,7 @@ Both services run in-memory. The order service calls the user service through th
 
 ## Configuration
 
-Use `LuxisHttpClientConfig` to set a base URL or enable error-aware responses:
+`LuxisHttpClientConfig` is immutable — each setter returns a new instance, and you start from `LuxisHttpClientConfig.defaults()`. Use it to set a base URL, enable SSL, or enable error-aware responses:
 
 ```java
 LuxisHttpClientConfig config = LuxisHttpClientConfig.defaults()
@@ -194,5 +194,5 @@ Download binary content with `download`:
 
 ```java
 httpClient.download(HttpClientRequest.request("/api/report"))
-// returns LuxisAsync<HttpClientResponse<HttpBuffer>>
+// returns LuxisAsync<HttpClientResponse<HttpBuffer>, HttpErrorResponse>
 ```

@@ -3,15 +3,17 @@ title: Configuration
 description: Customize the server with WebServiceConfigBuilder.
 ---
 
-Customize the server with `WebServiceConfigBuilder`:
+Customize the server with `WebServiceConfigBuilder` and pass the built `WebServerConfig` to `LuxisBuilder.withConfig(...)`:
 
 ```java
-WebServer.start(MyApp::registerRoutes, new WebServiceConfigBuilder()
-    .setPort(8080)
-    .setDefaultBlockingTimeoutMillis(5000)
-    .setExceptionHandler(Throwable::printStackTrace)
-    .setMaxBodySize(1_048_576)
-    .build());
+Luxis.app(MyApp::registerRoutes)
+    .withConfig(new WebServiceConfigBuilder()
+        .setPort(8080)
+        .setDefaultBlockingTimeoutMillis(5000)
+        .setExceptionHandler(Throwable::printStackTrace)
+        .setMaxBodySize(1_048_576)
+        .build())
+    .start();
 ```
 
 ## Available Options
@@ -19,19 +21,23 @@ WebServer.start(MyApp::registerRoutes, new WebServiceConfigBuilder()
 | Method | Description | Default |
 |---|---|---|
 | `setPort(int)` | The port the server listens on | `8080` |
-| `setDefaultBlockingTimeoutMillis(int)` | Timeout for blocking pipeline steps | `5000` |
-| `setExceptionHandler(Consumer<Throwable>)` | Handler for uncaught exceptions | — |
-| `setMaxBodySize(int)` | Maximum request body size in bytes | — |
-| `setCorsConfig(CorsConfig)` | CORS policy configuration | — |
+| `setDefaultBlockingTimeoutMillis(int)` | Timeout for blocking pipeline steps | `30000` |
+| `setExceptionHandler(Consumer<Exception>)` | Handler for uncaught exceptions | no-op |
+| `setMaxBodySize(long)` | Maximum request body size in bytes | unlimited |
+| `setCorsConfig(CorsConfig)` | CORS policy configuration | none |
 
 ## CORS Configuration
 
-Use `CorsConfigBuilder` to configure CORS:
+Use `CorsConfigBuilder` to configure CORS. The builder also exposes `allowMethod`, `allowHeader`, `exposeHeader`, `allowCredentials`, and `maxAgeSeconds`:
 
 ```java
 new WebServiceConfigBuilder()
     .setCorsConfig(new CorsConfigBuilder()
         .allowOrigin("https://example.com")
+        .allowMethod("GET")
+        .allowMethod("POST")
+        .allowHeader("Authorization")
+        .allowCredentials(true)
         .build())
     .build();
 ```

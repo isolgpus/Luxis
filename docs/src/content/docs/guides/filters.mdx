@@ -24,7 +24,7 @@ A filter implements `JsonFilter<APP>` and receives an `HttpStream<Void, APP>`:
 public class VisitedFilter implements JsonFilter<MyState> {
 
     @Override
-    public RequestPipeline<Void> handle(HttpStream<Void, MyState> e) {
+    public LuxisPipeline<Void> handle(HttpStream<Void, MyState> e) {
         return e.complete(ctx -> {
             ctx.session().addResponseCookie(new HttpCookie("visited", "true"));
             return HttpResult.success();
@@ -35,15 +35,15 @@ public class VisitedFilter implements JsonFilter<MyState> {
 
 ## Full Pipeline, No Request Body
 
-A filter's stream is the **same `HttpStream` type** handlers receive, so the entire pipeline API is available: `validate()`, `requireJwt()`, `map()`, `flatMap()`, `blockingMap()`, `blockingFlatMap()`, `asyncMap()`, `peek()`, and so on. You can short-circuit a request (e.g. return `401` from `flatMap`) or enrich the downstream context before the route handler runs.
+A filter's stream is the **same `HttpStream` type** handlers receive, so the entire pipeline API is available: `validate()`, `validateHttp()`, `requireJwt()`, `map()`, `flatMap()`, `blockingMap()`, `blockingFlatMap()`, `asyncMap()`, `peek()`, and so on. You can short-circuit a request (e.g. return `401` from `flatMap`) or enrich the downstream context before the route handler runs.
 
 The one thing filters **cannot** do is read the JSON request body. The stream's input type is `Void`, because a single filter can be registered against a wildcard path that matches many routes with different (or no) body types — there is no single type the framework can deserialize the body into. Calling `ctx.in()` inside a filter returns `null`.
 
 Everything else on the request is available through `ctx.session()` and `ctx.app()`:
 
 - Request headers — `ctx.session().getRequestHeader("...")`
-- Query parameters — `ctx.session().getQueryParam("...")` (and via `v.queryParam(...)` in `validate()`)
-- Path parameters — `ctx.session().getPathParam("...")` (and via `v.pathParam(...)` in `validate()`)
+- Query parameters — `ctx.session().getQueryParam("...")` (and via `v.queryParam(...)` in `validateHttp()`)
+- Path parameters — `ctx.session().getPathParam("...")` (and via `v.pathParam(...)` in `validateHttp()`)
 - Cookies — read via `ctx.session()`, write via `addResponseCookie(...)`
 - Response headers — `ctx.session().addResponseHeader(...)`
 - Application state — `ctx.app()`
@@ -59,16 +59,16 @@ public class JwtFilter implements JsonFilter<MyState> {
     }
 
     @Override
-    public RequestPipeline<Void> handle(HttpStream<Void, MyState> e) {
+    public LuxisPipeline<Void> handle(HttpStream<Void, MyState> e) {
         return e.requireJwt(jwtProvider).complete();
     }
 }
 ```
 
-Because `validate()` lives on `HttpStream`, filters can also validate query and path parameters before requests reach the route — but they cannot validate body fields (there is no body object to validate).
+Because `validateHttp()` lives on `HttpStream`, filters can also validate query and path parameters before requests reach the route — but they cannot validate body fields (there is no body object to validate).
 
 ```java
 return e
-    .validate(v -> v.queryParam("tenant").required().matches("[a-z0-9-]+"))
+    .validateHttp(v -> v.queryParam("tenant").required().matches("[a-z0-9-]+"))
     .complete();
 ```

@@ -9,7 +9,7 @@
     <version>0.5.2</version>
     <packaging>pom</packaging>
 
-    <name>Luxi# Parent</name>
+    <name>Luxis Parent</name>
     <description>Reactor parent for the Luxis web framework</description>
     <url>https://github.com/isolgpus/Luxis</url>
 

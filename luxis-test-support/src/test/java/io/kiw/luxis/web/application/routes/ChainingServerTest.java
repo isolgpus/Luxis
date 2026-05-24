@@ -2,7 +2,6 @@ package io.kiw.luxis.web.application.routes;
 
 import io.kiw.luxis.web.http.Method;
 import io.kiw.luxis.web.http.client.LuxisHttpClient;
-import io.kiw.luxis.web.test.StubNetwork;
 import io.kiw.luxis.web.test.StubRequest;
 import io.kiw.luxis.web.test.TestHttpResponse;
 import io.kiw.luxis.web.test.handler.ChainForwardGetHandler;
@@ -22,8 +21,6 @@ import java.util.List;
 
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.createHttpClient;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.createTestServerAndClient;
 import static io.kiw.luxis.web.test.TestHelper.json;
 
 @RunWith(Parameterized.class)
@@ -39,6 +36,7 @@ public class ChainingServerTest {
     }
 
     private final String mode;
+    private final TestApplicationClientCreator creator = new TestApplicationClientCreator();
     private List<TestClientAndServer> serverChain = List.of();
 
     public ChainingServerTest(String mode) {
@@ -61,27 +59,26 @@ public class ChainingServerTest {
 
     @Test
     public void shouldChainGetRequestThroughMultipleServers() {
-        final StubNetwork network = new StubNetwork();
         final List<TestClientAndServer> servers = new ArrayList<>();
 
         for (int i = 0; i < CHAIN_SIZE; i++) {
             final int port = INITIAL_CHAIN_PORT + i;
-            final LuxisHttpClient httpClient = createHttpClient(mode, network);
+            final LuxisHttpClient httpClient = creator.createHttpClient(mode);
 
             if (i == CHAIN_SIZE - 1) {
-                servers.add(createTestServerAndClient(mode, (r, state) ->
+                servers.add(creator.createTestServerAndClient(mode, (r, state) ->
                                 r.jsonRoute("/api/value", Method.GET, state, Void.class, new SimpleGetHandler(42)),
-                        builder -> builder.setPort(port), network));
+                        builder -> builder.setPort(port)));
             } else if (i == 0) {
                 final String secondBaseUrl = "http://" + HOST + ":" + (port + 1);
-                servers.add(createTestServerAndClient(mode, (r, state) ->
+                servers.add(creator.createTestServerAndClient(mode, (r, state) ->
                                 r.jsonRoute("/call-next", Method.POST, state, HttpClientGetRequest.class, new HttpClientCallHandler(httpClient, secondBaseUrl)),
-                        builder -> builder.setPort(port), network));
+                        builder -> builder.setPort(port)));
             } else {
                 final String nextUrl = "http://" + HOST + ":" + (port + 1) + "/api/value";
-                servers.add(createTestServerAndClient(mode, (r, state) ->
+                servers.add(creator.createTestServerAndClient(mode, (r, state) ->
                                 r.jsonRoute("/api/value", Method.GET, state, Void.class, new ChainForwardGetHandler(httpClient, nextUrl)),
-                        builder -> builder.setPort(port), network));
+                        builder -> builder.setPort(port)));
             }
         }
 

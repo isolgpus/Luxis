@@ -29,7 +29,6 @@ import java.util.List;
 
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.createTestServerAndClient;
 import static io.kiw.luxis.web.test.TestHelper.json;
 
 @RunWith(Parameterized.class)
@@ -41,6 +40,7 @@ public class HttpTransactionalMessagingTest {
     }
 
     private final String mode;
+    private final TestApplicationClientCreator creator = new TestApplicationClientCreator();
     private TestClientAndServer testClientAndServer;
 
     public HttpTransactionalMessagingTest(final String mode) {
@@ -70,7 +70,7 @@ public class HttpTransactionalMessagingTest {
         final InMemoryPublisher publisher = new InMemoryPublisher();
         final InMemoryOutboxStore outbox = new InMemoryOutboxStore();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new MultiPayloadTransactionalHandler());
         }, tm, publisher, outbox);
         final TestClient client = testClientAndServer.client();
@@ -105,7 +105,7 @@ public class HttpTransactionalMessagingTest {
         final InMemoryPublisher publisher = new InMemoryPublisher();
         final InMemoryOutboxStore outbox = new InMemoryOutboxStore().failAppends();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new MultiPayloadTransactionalHandler());
         }, tm, publisher, outbox);
         final TestClient client = testClientAndServer.client();
@@ -135,7 +135,7 @@ public class HttpTransactionalMessagingTest {
         final InMemoryPublisher publisher = new InMemoryPublisher();
         final InMemoryOutboxStore outbox = new InMemoryOutboxStore();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/publish", Method.POST, state, EchoRequest.class, new OutsideTxPublishHandler());
         }, tm, publisher, outbox);
         final TestClient client = testClientAndServer.client();
@@ -167,7 +167,7 @@ public class HttpTransactionalMessagingTest {
         final InMemoryPublisher publisher = new InMemoryPublisher();
         final InMemoryOutboxStore outbox = new InMemoryOutboxStore().disableDrainer();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new MultiPayloadTransactionalHandler());
         }, tm, publisher, outbox);
         final TestClient client = testClientAndServer.client();
@@ -194,7 +194,7 @@ public class HttpTransactionalMessagingTest {
     public void shouldFailWhenInsideTxPublishHasNoOutboxRegistered() {
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new MultiPayloadTransactionalHandler());
         }, tm);
         final TestClient client = testClientAndServer.client();

@@ -22,7 +22,6 @@ import java.util.Collection;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.createContextAsserter;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.createTestServerAndClient;
 import static io.kiw.luxis.web.test.TestHelper.json;
 
 @RunWith(Parameterized.class)
@@ -34,6 +33,7 @@ public class HttpTransactionTest {
     }
 
     private final String mode;
+    private final TestApplicationClientCreator creator = new TestApplicationClientCreator();
     private TestClientAndServer testClientAndServer;
 
     public HttpTransactionTest(final String mode) {
@@ -62,7 +62,7 @@ public class HttpTransactionTest {
         final ContextAsserter asserter = createContextAsserter(mode);
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new TransactionalHttpHandler(asserter));
         }, tm);
         final TestClient client = testClientAndServer.client();
@@ -95,7 +95,7 @@ public class HttpTransactionTest {
         final ContextAsserter asserter = createContextAsserter(mode);
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new TransactionalHttpHandler(asserter));
         }, tm);
         final TestClient client = testClientAndServer.client();
@@ -124,7 +124,7 @@ public class HttpTransactionTest {
         final ContextAsserter asserter = createContextAsserter(mode);
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new RollbackOnErrorHttpHandler(asserter));
         }, tm);
         final TestClient client = testClientAndServer.client();
@@ -147,7 +147,7 @@ public class HttpTransactionTest {
     public void shouldRollbackWhenAsyncMapReturnsFailedFuture() {
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new AsyncMapThrowsTransactionalHttpHandler());
         }, tm);
         final TestClient client = testClientAndServer.client();
@@ -168,7 +168,7 @@ public class HttpTransactionTest {
     public void shouldRollbackWhenSyncMapThrows() {
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new MapThrowsTransactionalHttpHandler());
         }, tm);
         final TestClient client = testClientAndServer.client();
@@ -190,7 +190,7 @@ public class HttpTransactionTest {
         final ContextAsserter asserter = createContextAsserter(mode);
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient().failCommits();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new TransactionalHttpHandler(asserter));
         }, tm);
         final TestClient client = testClientAndServer.client();
@@ -216,7 +216,7 @@ public class HttpTransactionTest {
         final ContextAsserter asserter = createContextAsserter(mode);
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient().failRollbacks();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new RollbackOnErrorHttpHandler(asserter));
         }, tm);
         final TestClient client = testClientAndServer.client();
@@ -237,7 +237,7 @@ public class HttpTransactionTest {
     public void shouldRollbackWhenAsyncMapReturnsTypedError() {
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new AsyncMapTypedErrorTransactionalHttpHandler());
         }, tm);
         final TestClient client = testClientAndServer.client();
@@ -260,7 +260,7 @@ public class HttpTransactionTest {
     public void shouldRollbackWhenAsyncMapMapperThrowsSynchronously() {
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new AsyncMapSyncThrowTransactionalHttpHandler());
         }, tm);
         final TestClient client = testClientAndServer.client();
@@ -281,7 +281,7 @@ public class HttpTransactionTest {
     public void shouldFlowFinalValueIntoOuterStepAfterTransaction() {
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new OuterStepAfterTransactionHttpHandler());
         }, tm);
         final TestClient client = testClientAndServer.client();
@@ -308,7 +308,7 @@ public class HttpTransactionTest {
     public void shouldRunTwoSequentialTransactionsWithinOneRequest() {
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new TwoTransactionsHttpHandler());
         }, tm);
         final TestClient client = testClientAndServer.client();
@@ -338,7 +338,7 @@ public class HttpTransactionTest {
         final ContextAsserter asserter = createContextAsserter(mode);
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new ChainedAsyncTransactionalHttpHandler(asserter));
         }, tm);
         final TestClient client = testClientAndServer.client();
@@ -367,7 +367,7 @@ public class HttpTransactionTest {
     public void shouldRollbackWhenSecondChainedAsyncFails() {
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new ChainedAsyncSecondFailsTransactionalHttpHandler());
         }, tm);
         final TestClient client = testClientAndServer.client();

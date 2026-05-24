@@ -20,7 +20,6 @@ import java.util.List;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.createContextAsserter;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.createTestServerAndClient;
 import static io.kiw.luxis.web.test.TestHelper.json;
 
 @RunWith(Parameterized.class)
@@ -32,6 +31,7 @@ public class WebSocketTransactionTest {
     }
 
     private final String mode;
+    private final TestApplicationClientCreator creator = new TestApplicationClientCreator();
     private TestWebSocketClient ws;
     private TestClientAndServer testClientAndServer;
 
@@ -64,7 +64,7 @@ public class WebSocketTransactionTest {
         final ContextAsserter asserter = createContextAsserter(mode);
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.webSocketRoute("/ws/tx", state, new TransactionalWebSocketRoutes(asserter));
         }, tm);
         final TestClient client = testClientAndServer.client();
@@ -92,7 +92,7 @@ public class WebSocketTransactionTest {
         final ContextAsserter asserter = createContextAsserter(mode);
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.webSocketRoute("/ws/tx", state, new RollbackOnErrorWebSocketRoutes(asserter));
         }, tm);
         final TestClient client = testClientAndServer.client();
@@ -117,7 +117,7 @@ public class WebSocketTransactionTest {
     public void shouldRollbackWhenAsyncMapReturnsFailedFuture() {
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.webSocketRoute("/ws/tx", state, new AsyncMapThrowsTransactionalWebSocketRoutes());
         }, tm);
         final TestClient client = testClientAndServer.client();

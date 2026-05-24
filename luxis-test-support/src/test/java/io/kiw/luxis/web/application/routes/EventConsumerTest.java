@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.createTestServerAndClient;
 
 @RunWith(Parameterized.class)
 public class EventConsumerTest {
@@ -32,6 +31,7 @@ public class EventConsumerTest {
     }
 
     private final String mode;
+    private final TestApplicationClientCreator creator = new TestApplicationClientCreator();
     private TestClientAndServer publisherTestClientAndServer;
     private TestClientAndServer consumerTestClientAndServer;
 
@@ -69,7 +69,7 @@ public class EventConsumerTest {
         final InMemoryOutboxStore outbox = new InMemoryOutboxStore();
         final AtomicReference<Animal> received = new AtomicReference<>();
 
-        publisherTestClientAndServer = createTestServerAndClient(mode, 8081, (r, state) -> {
+        publisherTestClientAndServer = creator.createTestServerAndClient(mode, 8081, (r, state) -> {
             r.jsonRoute("/publishToOther", Method.POST, new GenericAppState(), PublishTestRequest.class,
                     e -> e.inTransaction(
                                     tx -> tx.asyncMap(
@@ -80,7 +80,7 @@ public class EventConsumerTest {
                             .complete());
         }, tm, publisher, outbox);
 
-        consumerTestClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        consumerTestClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.eventRoute("someKey", state, Animal.class, luxisStream -> luxisStream
                     .peek(ctx -> received.set(ctx.in()))
                     .complete());

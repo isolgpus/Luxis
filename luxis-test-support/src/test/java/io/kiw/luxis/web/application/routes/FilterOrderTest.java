@@ -36,6 +36,7 @@ public class FilterOrderTest {
     }
 
     private final String mode;
+    private final TestApplicationClientCreator creator = new TestApplicationClientCreator();
     private TestClientAndServer testClientAndServer;
 
     public FilterOrderTest(String mode) {
@@ -61,7 +62,7 @@ public class FilterOrderTest {
     public void shouldExecuteFiltersInRegistrationOrder() {
         final List<String> executionOrder = new ArrayList<>();
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonFilter("/ordered/*", state, e -> e.complete(ctx -> {
                 executionOrder.add("first");
                 ctx.session().addResponseCookie(new HttpCookie("filter-first", "hit"));
@@ -85,7 +86,7 @@ public class FilterOrderTest {
     public void shouldExecuteNarrowAndBroadFiltersInRegistrationOrder() {
         final List<String> executionOrder = new ArrayList<>();
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonFilter("/a/*", state, e -> e.complete(ctx -> {
                 executionOrder.add("broad");
                 ctx.session().addResponseCookie(new HttpCookie("broad", "hit"));
@@ -111,7 +112,7 @@ public class FilterOrderTest {
     public void shouldOnlyExecuteMatchingFilters() {
         final List<String> executionOrder = new ArrayList<>();
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonFilter("/api/*", state, e -> e.complete(ctx -> {
                 executionOrder.add("api");
                 return HttpResult.success();

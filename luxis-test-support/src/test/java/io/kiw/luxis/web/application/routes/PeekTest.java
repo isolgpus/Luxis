@@ -30,6 +30,7 @@ public class PeekTest {
     }
 
     private final String mode;
+    private final TestApplicationClientCreator creator = new TestApplicationClientCreator();
     private TestClientAndServer testClientAndServer;
     private TestWebSocketClient ws;
 
@@ -58,7 +59,7 @@ public class PeekTest {
     @Test
     public void shouldExecutePeekSideEffectAndPassThroughValue() {
         final PeekTestHandler handler = new PeekTestHandler();
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/peek", Method.POST, state, BlockingRequest.class, handler);
         });
         TestClient client = testClientAndServer.client();
@@ -77,7 +78,7 @@ public class PeekTest {
     @Test
     public void shouldExecutePeekSideEffectsOnMultipleRequests() {
         final PeekTestHandler handler = new PeekTestHandler();
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/peek", Method.POST, state, BlockingRequest.class, handler);
         });
         TestClient client = testClientAndServer.client();
@@ -92,7 +93,7 @@ public class PeekTest {
     @Test
     public void shouldExecuteWebSocketPeekSideEffectAndPassThroughValue() {
         final PeekWebSocketRoutes handler = new PeekWebSocketRoutes();
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.webSocketRoute("/ws/peek", state, handler);
         });
         TestClient client = testClientAndServer.client();
@@ -116,7 +117,7 @@ public class PeekTest {
     @Test
     public void shouldExecuteWebSocketPeekSideEffectsOnMultipleMessages() {
         final PeekWebSocketRoutes handler = new PeekWebSocketRoutes();
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.webSocketRoute("/ws/peek", state, handler);
         });
         TestClient client = testClientAndServer.client();

@@ -43,6 +43,7 @@ public class AsyncTest {
     }
 
     private final String mode;
+    private final TestApplicationClientCreator creator = new TestApplicationClientCreator();
     private TestClientAndServer testClientAndServer;
     private TestWebSocketClient ws;
 
@@ -72,7 +73,7 @@ public class AsyncTest {
     public void shouldSupportCorrelatedAsyncMap() {
         final AsyncMapTestHandler handler = new AsyncMapTestHandler();
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/async", Method.POST, state, AsyncMapRequest.class, handler);
         });
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
@@ -89,7 +90,7 @@ public class AsyncTest {
     @Test
     public void shouldSupportCorrelatedAsyncBlockingMap() {
         AsyncBlockingMapTestHandler handler = new AsyncBlockingMapTestHandler();
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/asyncBlocking", Method.POST, state, AsyncMapRequest.class, handler);
         });
         TestClient luxisTestClient = testClientAndServer.client();
@@ -106,7 +107,7 @@ public class AsyncTest {
     public void shouldReturnErrorWhenAsyncResponseIsError() {
         AsyncMapTestHandler handler = new AsyncMapTestHandler(value -> HttpResult.error(ErrorStatusCode.BAD_REQUEST, new ErrorMessageResponse("async error")));
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/async", Method.POST, state, AsyncMapRequest.class,
                     handler);
         });
@@ -124,7 +125,7 @@ public class AsyncTest {
     @Test
     public void shouldPassInputValueToHandler() {
         AsyncMapTestHandler handler = new AsyncMapTestHandler();
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/async", Method.POST, state, AsyncMapRequest.class, handler);
         });
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
@@ -141,7 +142,7 @@ public class AsyncTest {
 
     @Test
     public void shouldHandleExceptionInCorrelatedAsyncHandler() {
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/throw", Method.POST, state, AsyncMapRequest.class, new AsyncThrowTestHandler());
         });
         TestClient luxisTestClient = testClientAndServer.client();
@@ -156,7 +157,7 @@ public class AsyncTest {
     @Test
     public void shouldWorkWithPipelineStepsBeforeCorrelatedAsync() {
         AsyncWithHttpContextTestHandler jsonHandler = new AsyncWithHttpContextTestHandler();
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/withContext", Method.POST, state, AsyncMapRequest.class, jsonHandler);
         });
         TestClient luxisTestClient = testClientAndServer.client();
@@ -177,7 +178,7 @@ public class AsyncTest {
     @Test
     public void shouldHandleStandardClientErrorAndMapToInternalServerError() {
         AsyncMapTestHandler handler = new AsyncMapTestHandler(value -> HttpResult.error(ErrorStatusCode.NOT_FOUND, new ErrorMessageResponse("not found")));
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/async", Method.POST, state, AsyncMapRequest.class,
                     handler);
         });
@@ -194,7 +195,7 @@ public class AsyncTest {
     public void shouldTimeoutWithCustomOneSecondTimeout() {
         final AsyncCustomTimeoutTestHandler handler = new AsyncCustomTimeoutTestHandler();
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/customTimeout", Method.POST, state, AsyncMapRequest.class, handler);
         });
 
@@ -217,7 +218,7 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryTestHandler handler = new AsyncRetryTestHandler(counter, new TestRetryBehaviour().error().error().error().error());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/customTimeout", Method.POST, state, AsyncMapRequest.class, handler);
         });
 
@@ -240,7 +241,7 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryTestHandler handler = new AsyncRetryTestHandler(counter, new TestRetryBehaviour().success());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/retry", Method.POST, state, AsyncMapRequest.class, handler);
         });
 
@@ -260,7 +261,7 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryTestHandler handler = new AsyncRetryTestHandler(counter, new TestRetryBehaviour().error().error().success());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/retry", Method.POST, state, AsyncMapRequest.class, handler);
         });
 
@@ -280,7 +281,7 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryTestHandler handler = new AsyncRetryTestHandler(counter, new TestRetryBehaviour().error().error().error().success());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/retry", Method.POST, state, AsyncMapRequest.class, handler);
         });
 
@@ -300,7 +301,7 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryTestHandler handler = new AsyncRetryTestHandler(counter, new TestRetryBehaviour().exception().success());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/retry", Method.POST, state, AsyncMapRequest.class, handler);
         });
 
@@ -321,7 +322,7 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryTestHandler handler = new AsyncRetryTestHandler(counter, new TestRetryBehaviour().error().exception().error().success());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/retry", Method.POST, state, AsyncMapRequest.class, handler);
         });
 
@@ -346,7 +347,7 @@ public class AsyncTest {
                 .exception()
                 .exception());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/retry", Method.POST, state, AsyncMapRequest.class, handler);
         });
 
@@ -365,7 +366,7 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryTestHandler handler = new AsyncRetryTestHandler(counter, new TestRetryBehaviour().exception().error().exception().error());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/retry", Method.POST, state, AsyncMapRequest.class, handler);
         });
 
@@ -388,7 +389,7 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryWebSocketRoutes handler = new AsyncRetryWebSocketRoutes(counter, new TestRetryBehaviour().error().error().error().error());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.webSocketRoute("/ws/retry", state, handler);
         });
 
@@ -412,7 +413,7 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryWebSocketRoutes handler = new AsyncRetryWebSocketRoutes(counter, new TestRetryBehaviour().success());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.webSocketRoute("/ws/retry", state, handler);
         });
 
@@ -436,7 +437,7 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryWebSocketRoutes handler = new AsyncRetryWebSocketRoutes(counter, new TestRetryBehaviour().error().error().success());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.webSocketRoute("/ws/retry", state, handler);
         });
 
@@ -460,7 +461,7 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryWebSocketRoutes handler = new AsyncRetryWebSocketRoutes(counter, new TestRetryBehaviour().error().error().error().success());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.webSocketRoute("/ws/retry", state, handler);
         });
 
@@ -484,7 +485,7 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryWebSocketRoutes handler = new AsyncRetryWebSocketRoutes(counter, new TestRetryBehaviour().exception().success());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.webSocketRoute("/ws/retry", state, handler);
         });
 
@@ -508,7 +509,7 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryWebSocketRoutes handler = new AsyncRetryWebSocketRoutes(counter, new TestRetryBehaviour().error().exception().error().success());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.webSocketRoute("/ws/retry", state, handler);
         });
 
@@ -536,7 +537,7 @@ public class AsyncTest {
                 .exception()
                 .exception());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.webSocketRoute("/ws/retry", state, handler);
         });
 
@@ -561,7 +562,7 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryWebSocketRoutes handler = new AsyncRetryWebSocketRoutes(counter, new TestRetryBehaviour().exception().error().exception().error());
 
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.webSocketRoute("/ws/retry", state, handler);
         });
 

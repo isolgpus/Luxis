@@ -17,7 +17,6 @@ import java.util.Collection;
 
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.createTestServerAndClient;
 import static io.kiw.luxis.web.test.TestHelper.json;
 
 @RunWith(Parameterized.class)
@@ -29,6 +28,7 @@ public class MaxBodySizeTest {
     }
 
     private final String mode;
+    private final TestApplicationClientCreator creator = new TestApplicationClientCreator();
     private TestClientAndServer testClientAndServer;
 
     public MaxBodySizeTest(String mode) {
@@ -52,7 +52,7 @@ public class MaxBodySizeTest {
 
     @Test
     public void shouldRejectRequestExceedingMaxBodySize() {
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
         }, builder -> builder.setMaxBodySize(10));
         TestClient client = testClientAndServer.client();
@@ -66,7 +66,7 @@ public class MaxBodySizeTest {
 
     @Test
     public void shouldAcceptRequestWithinMaxBodySize() {
-        testClientAndServer = createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
         }, builder -> builder.setMaxBodySize(1000));
         TestClient client = testClientAndServer.client();
@@ -81,7 +81,7 @@ public class MaxBodySizeTest {
 
     @Test
     public void shouldNotEnforceBodyLimitWhenNotConfigured() {
-        testClientAndServer = TestApplicationClientCreator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
         });
         TestClient client = testClientAndServer.client();

@@ -49,10 +49,6 @@ public class TestApplicationClientCreator {
         }
     }
 
-    public StubNetwork network() {
-        return network;
-    }
-
     public LuxisHttpClient createHttpClient(String mode) {
         return createHttpClient(mode, LuxisHttpClientConfig.defaults());
     }

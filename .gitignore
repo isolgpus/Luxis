@@ -2,6 +2,7 @@ target/
 .idea/*
 *.iml
 .m2/*
+.flattened-pom.xml
 
 # Docs
 docs/node_modules/

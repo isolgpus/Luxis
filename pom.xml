@@ -6,7 +6,7 @@
 
     <groupId>io.kiw.luxis</groupId>
     <artifactId>luxis-parent</artifactId>
-    <version>0.5.2</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
 
     <name>Luxis Parent</name>
@@ -39,6 +39,7 @@
     </modules>
 
     <properties>
+        <revision>0.5.3</revision>
         <java.version>21</java.version>
         <vertx.version>5.0.8</vertx.version>
         <jackson.version>3.1.0</jackson.version>
@@ -165,6 +166,31 @@
                     </executions>
                 </plugin>
                 <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>flatten-maven-plugin</artifactId>
+                    <version>1.6.0</version>
+                    <configuration>
+                        <updatePomFile>true</updatePomFile>
+                        <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>flatten</id>
+                            <phase>process-resources</phase>
+                            <goals>
+                                <goal>flatten</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>flatten.clean</id>
+                            <phase>clean</phase>
+                            <goals>
+                                <goal>clean</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-gpg-plugin</artifactId>
                     <version>3.1.0</version>
@@ -187,6 +213,10 @@
             </plugins>
         </pluginManagement>
         <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+            </plugin>
             <plugin>
                 <groupId>org.sonatype.central</groupId>
                 <artifactId>central-publishing-maven-plugin</artifactId>

@@ -1,6 +1,5 @@
 package io.kiw.luxis.web.jwt;
 
-import java.util.Collections;
 import java.util.Map;
 
 public record JwtClaims(Map<String, Object> claims) {
@@ -16,7 +15,4 @@ public record JwtClaims(Map<String, Object> claims) {
         return sub != null ? sub.toString() : null;
     }
 
-    public Map<String, Object> asMap() {
-        return Collections.unmodifiableMap(claims);
-    }
 }

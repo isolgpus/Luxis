@@ -21,10 +21,6 @@ public class TransactionExecutor {
     private final ExecutionDispatcher executionDispatcher;
     private final MessagingComponents messaging;
 
-    public TransactionExecutor(final DatabaseClient<?, ?, ?> databaseClient, final ExecutionDispatcher executionDispatcher) {
-        this(databaseClient, executionDispatcher, MessagingComponents.NONE);
-    }
-
     public TransactionExecutor(final DatabaseClient<?, ?, ?> databaseClient, final ExecutionDispatcher executionDispatcher, final MessagingComponents messaging) {
         this.databaseClient = databaseClient;
         this.executionDispatcher = executionDispatcher;

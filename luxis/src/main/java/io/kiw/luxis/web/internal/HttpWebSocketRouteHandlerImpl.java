@@ -33,14 +33,6 @@ public class HttpWebSocketRouteHandlerImpl<APP, RESP> implements HttpWebSocketRo
     private final Map<Class<?>, String> responseTypeRegistry;
     private final WebSocketRouteConfig config;
 
-    public HttpWebSocketRouteHandlerImpl(final WebSocketRoutes<APP, RESP> route, final ObjectMapper objectMapper, final APP appState, final Consumer<Exception> exceptionHandler, final ExecutionDispatcher executionDispatcher, final WebSocketRouteConfig config, final PendingAsyncResponses pendingAsyncResponses) {
-        this(route, objectMapper, appState, exceptionHandler, executionDispatcher, config, pendingAsyncResponses, null, MessagingComponents.NONE);
-    }
-
-    public HttpWebSocketRouteHandlerImpl(final WebSocketRoutes<APP, RESP> route, final ObjectMapper objectMapper, final APP appState, final Consumer<Exception> exceptionHandler, final ExecutionDispatcher executionDispatcher, final WebSocketRouteConfig config, final PendingAsyncResponses pendingAsyncResponses, final DatabaseClient<?, ?, ?> databaseClient) {
-        this(route, objectMapper, appState, exceptionHandler, executionDispatcher, config, pendingAsyncResponses, databaseClient, MessagingComponents.NONE);
-    }
-
     public HttpWebSocketRouteHandlerImpl(final WebSocketRoutes<APP, RESP> route, final ObjectMapper objectMapper, final APP appState, final Consumer<Exception> exceptionHandler, final ExecutionDispatcher executionDispatcher, final WebSocketRouteConfig config, final PendingAsyncResponses pendingAsyncResponses, final DatabaseClient<?, ?, ?> databaseClient, final MessagingComponents messaging) {
         this.route = route;
         this.objectMapper = objectMapper;

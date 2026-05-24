@@ -25,6 +25,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class OpenApiSpecTest {
@@ -66,10 +68,13 @@ public class OpenApiSpecTest {
 
     @Test
     public void shouldGenerateSpecWithCorrectVersion() throws Exception {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.serveOpenApiSpec("/openapi.json", "Test API", "1.0.0", "A test API");
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         JsonNode spec = getSpec(luxisTestClient);
@@ -82,11 +87,14 @@ public class OpenApiSpecTest {
 
     @Test
     public void shouldGeneratePathsForRegisteredRoutes() throws Exception {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
             r.serveOpenApiSpec("/openapi.json", "Test API", "1.0.0", "A test API");
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         JsonNode spec = getSpec(luxisTestClient);
@@ -99,7 +107,8 @@ public class OpenApiSpecTest {
 
     @Test
     public void shouldConvertPathParamsToOpenApiFormat() throws Exception {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/openapi/echo/:pathExample", Method.GET, state, Void.class, new GetEchoHandler(),
                     new RouteConfigBuilder()
                             .openApi()
@@ -107,7 +116,9 @@ public class OpenApiSpecTest {
                             .build()
             );
             r.serveOpenApiSpec("/openapi.json", "Test API", "1.0.0", "A test API");
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         JsonNode spec = getSpec(luxisTestClient);
@@ -130,7 +141,8 @@ public class OpenApiSpecTest {
 
     @Test
     public void shouldGenerateRequestBodySchemaFromInputType() throws Exception {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/openapi/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler(),
                     new RouteConfigBuilder()
                             .openApi()
@@ -141,7 +153,9 @@ public class OpenApiSpecTest {
                             .build()
             );
             r.serveOpenApiSpec("/openapi.json", "Test API", "1.0.0", "A test API");
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         JsonNode spec = getSpec(luxisTestClient);
@@ -162,7 +176,8 @@ public class OpenApiSpecTest {
 
     @Test
     public void shouldGenerateResponseSchemaFromOutputType() throws Exception {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/openapi/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler(),
                     new RouteConfigBuilder()
                             .openApi()
@@ -170,7 +185,9 @@ public class OpenApiSpecTest {
                             .build()
             );
             r.serveOpenApiSpec("/openapi.json", "Test API", "1.0.0", "A test API");
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         JsonNode spec = getSpec(luxisTestClient);
@@ -190,10 +207,13 @@ public class OpenApiSpecTest {
 
     @Test
     public void shouldNotIncludeRequestBodyForGetRoutes() throws Exception {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
             r.serveOpenApiSpec("/openapi.json", "Test API", "1.0.0", "A test API");
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         JsonNode spec = getSpec(luxisTestClient);
@@ -204,7 +224,8 @@ public class OpenApiSpecTest {
 
     @Test
     public void shouldApplyOpenApiMetadata() throws Exception {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/openapi/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler(),
                     new RouteConfigBuilder()
                             .openApi()
@@ -215,7 +236,9 @@ public class OpenApiSpecTest {
                             .build()
             );
             r.serveOpenApiSpec("/openapi.json", "Test API", "1.0.0", "A test API");
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         JsonNode spec = getSpec(luxisTestClient);
@@ -229,7 +252,8 @@ public class OpenApiSpecTest {
 
     @Test
     public void shouldApplyParamDescriptions() throws Exception {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/openapi/echo/:pathExample", Method.GET, state, Void.class, new GetEchoHandler(),
                     new RouteConfigBuilder()
                             .openApi()
@@ -237,7 +261,9 @@ public class OpenApiSpecTest {
                             .build()
             );
             r.serveOpenApiSpec("/openapi.json", "Test API", "1.0.0", "A test API");
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         JsonNode spec = getSpec(luxisTestClient);
@@ -255,7 +281,8 @@ public class OpenApiSpecTest {
 
     @Test
     public void shouldHideRoutesMarkedAsHidden() throws Exception {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.jsonRoute("/openapi/hidden", Method.GET, state, Void.class, new GetEchoHandler(),
                     new RouteConfigBuilder()
@@ -264,7 +291,9 @@ public class OpenApiSpecTest {
                             .build()
             );
             r.serveOpenApiSpec("/openapi.json", "Test API", "1.0.0", "A test API");
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         JsonNode spec = getSpec(luxisTestClient);
@@ -277,10 +306,13 @@ public class OpenApiSpecTest {
 
     @Test
     public void shouldGenerateOperationIds() throws Exception {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.serveOpenApiSpec("/openapi.json", "Test API", "1.0.0", "A test API");
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         JsonNode spec = getSpec(luxisTestClient);
@@ -292,7 +324,8 @@ public class OpenApiSpecTest {
 
     @Test
     public void shouldMarkPrimitiveFieldsAsRequired() throws Exception {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/openapi/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler(),
                     new RouteConfigBuilder()
                             .openApi()
@@ -300,7 +333,9 @@ public class OpenApiSpecTest {
                             .build()
             );
             r.serveOpenApiSpec("/openapi.json", "Test API", "1.0.0", "A test API");
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         JsonNode spec = getSpec(luxisTestClient);
@@ -321,10 +356,13 @@ public class OpenApiSpecTest {
 
     @Test
     public void shouldServeSpecViaEndpoint() throws Exception {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.serveOpenApiSpec("/openapi.json", "Test API", "1.0.0", "A test API");
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.get(StubRequest.request("/openapi.json"));
@@ -338,7 +376,8 @@ public class OpenApiSpecTest {
 
     @Test
     public void shouldChainRouteConfigWithTimeoutAndOpenApi() throws Exception {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/openapi/timeout", Method.POST, state, EchoRequest.class, new PostEchoHandler(),
                     new RouteConfigBuilder()
                             .timeout(5000)
@@ -348,7 +387,9 @@ public class OpenApiSpecTest {
                             .build()
             );
             r.serveOpenApiSpec("/openapi.json", "Test API", "1.0.0", "A test API");
-        });
+
+            return state;
+        }));
 
         JsonNode spec = getSpec(testClientAndServer.client());
         assertEquals("Echo with timeout", spec.get("paths").get("/openapi/timeout").get("post").get("summary").asText());

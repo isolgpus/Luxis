@@ -21,6 +21,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.WebServiceConfigBuilder;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class EventConsumerTest {
@@ -69,7 +72,8 @@ public class EventConsumerTest {
         final InMemoryOutboxStore outbox = new InMemoryOutboxStore();
         final AtomicReference<Animal> received = new AtomicReference<>();
 
-        publisherTestClientAndServer = creator.createTestServerAndClient(mode, 8081, (r, state) -> {
+        publisherTestClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/publishToOther", Method.POST, new GenericAppState(), PublishTestRequest.class,
                     e -> e.inTransaction(
                                     tx -> tx.asyncMap(
@@ -78,13 +82,18 @@ public class EventConsumerTest {
                                                 return AsyncTestSupport.completed(new PublishTestResponse());
                                             }).commit())
                             .complete());
-        }, tm, publisher, outbox);
 
-        consumerTestClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(8081).build()).withDatabase(tm).withEventPlatform(TestApplicationClientCreator.createEventPlatform(publisher, outbox, null)));
+
+        consumerTestClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.eventRoute("someKey", state, Animal.class, luxisStream -> luxisStream
                     .peek(ctx -> received.set(ctx.in()))
                     .complete());
-        }, tm, publisher, outbox, new InMemoryEventConsumer("topic"));
+
+            return state;
+        }).withDatabase(tm).withEventPlatform(TestApplicationClientCreator.createEventPlatform(publisher, outbox, new InMemoryEventConsumer("topic"))));
 
         final TestClient client = publisherTestClientAndServer.client();
         final TestHttpResponse response = client.post(StubRequest.request("/publishToOther").body("{}"));

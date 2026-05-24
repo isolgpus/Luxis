@@ -24,6 +24,9 @@ import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.R
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.WebServiceConfigBuilder;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class CorsTest {
@@ -63,10 +66,13 @@ public class CorsTest {
 
     @Test
     public void shouldReturnCorsHeadersOnPreflightRequest() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
-        }, defaultCorsConfig);
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setCorsConfig(defaultCorsConfig).build()));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.options(
@@ -84,10 +90,13 @@ public class CorsTest {
 
     @Test
     public void shouldReturnCorsHeadersOnPreflightForSecondAllowedOrigin() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
-        }, defaultCorsConfig);
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setCorsConfig(defaultCorsConfig).build()));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.options(
@@ -101,10 +110,13 @@ public class CorsTest {
 
     @Test
     public void shouldRejectPreflightFromDisallowedOrigin() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
-        }, defaultCorsConfig);
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setCorsConfig(defaultCorsConfig).build()));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.options(
@@ -118,10 +130,13 @@ public class CorsTest {
 
     @Test
     public void shouldRejectPreflightWithNoOrigin() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
-        }, defaultCorsConfig);
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setCorsConfig(defaultCorsConfig).build()));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.options(
@@ -133,10 +148,13 @@ public class CorsTest {
 
     @Test
     public void shouldAddCorsHeadersToNormalGetResponse() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
-        }, defaultCorsConfig);
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setCorsConfig(defaultCorsConfig).build()));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.get(
@@ -151,10 +169,13 @@ public class CorsTest {
 
     @Test
     public void shouldAddCorsHeadersToNormalPostResponse() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
-        }, defaultCorsConfig);
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setCorsConfig(defaultCorsConfig).build()));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.post(
@@ -169,10 +190,13 @@ public class CorsTest {
 
     @Test
     public void shouldNotAddCorsHeadersForDisallowedOriginOnNormalRequest() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
-        }, defaultCorsConfig);
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setCorsConfig(defaultCorsConfig).build()));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.get(
@@ -185,10 +209,13 @@ public class CorsTest {
 
     @Test
     public void shouldNotAddCorsHeadersWhenNoOriginOnNormalRequest() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
-        }, defaultCorsConfig);
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setCorsConfig(defaultCorsConfig).build()));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.get(
@@ -204,10 +231,13 @@ public class CorsTest {
                 .allowOrigin("*")
                 .allowMethod("GET")
                 .build();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
-        }, wildcardConfig);
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setCorsConfig(wildcardConfig).build()));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse preflight = client.options(
@@ -232,10 +262,13 @@ public class CorsTest {
                 .allowOrigin("http://simple.example.com")
                 .allowMethod("GET")
                 .build();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
-        }, simpleConfig);
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setCorsConfig(simpleConfig).build()));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.options(
@@ -250,10 +283,13 @@ public class CorsTest {
 
     @Test
     public void shouldNotInterfereWithNormalRequestsWhenNoCorsConfigured() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.get(StubRequest.request("/echo"));
@@ -264,11 +300,14 @@ public class CorsTest {
 
     @Test
     public void shouldAddCorsHeadersToFilteredRoutes() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/root/*", state, new TestFilter("rootFilter"));
             r.jsonFilter("/root/filter/*", state, new TestFilter("pathFilter"));
             r.jsonRoute("/root/filter/test", Method.POST, state, TestFilterRequest.class, new TestFilterHandler());
-        }, defaultCorsConfig);
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setCorsConfig(defaultCorsConfig).build()));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.post(
@@ -282,11 +321,14 @@ public class CorsTest {
 
     @Test
     public void shouldHandlePreflightOnFilteredRoutes() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/root/*", state, new TestFilter("rootFilter"));
             r.jsonFilter("/root/filter/*", state, new TestFilter("pathFilter"));
             r.jsonRoute("/root/filter/test", Method.POST, state, TestFilterRequest.class, new TestFilterHandler());
-        }, defaultCorsConfig);
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setCorsConfig(defaultCorsConfig).build()));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.options(

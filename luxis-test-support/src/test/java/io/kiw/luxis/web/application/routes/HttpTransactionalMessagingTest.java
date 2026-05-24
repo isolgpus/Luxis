@@ -30,6 +30,7 @@ import java.util.List;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
+import io.kiw.luxis.web.Luxis;
 
 @RunWith(Parameterized.class)
 public class HttpTransactionalMessagingTest {
@@ -70,9 +71,12 @@ public class HttpTransactionalMessagingTest {
         final InMemoryPublisher publisher = new InMemoryPublisher();
         final InMemoryOutboxStore outbox = new InMemoryOutboxStore();
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new MultiPayloadTransactionalHandler());
-        }, tm, publisher, outbox);
+
+            return state;
+        }).withDatabase(tm).withEventPlatform(TestApplicationClientCreator.createEventPlatform(publisher, outbox, null)));
         final TestClient client = testClientAndServer.client();
 
         final TestHttpResponse response = client.post(
@@ -105,9 +109,12 @@ public class HttpTransactionalMessagingTest {
         final InMemoryPublisher publisher = new InMemoryPublisher();
         final InMemoryOutboxStore outbox = new InMemoryOutboxStore().failAppends();
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new MultiPayloadTransactionalHandler());
-        }, tm, publisher, outbox);
+
+            return state;
+        }).withDatabase(tm).withEventPlatform(TestApplicationClientCreator.createEventPlatform(publisher, outbox, null)));
         final TestClient client = testClientAndServer.client();
 
         final TestHttpResponse response = client.post(
@@ -135,9 +142,12 @@ public class HttpTransactionalMessagingTest {
         final InMemoryPublisher publisher = new InMemoryPublisher();
         final InMemoryOutboxStore outbox = new InMemoryOutboxStore();
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/publish", Method.POST, state, EchoRequest.class, new OutsideTxPublishHandler());
-        }, tm, publisher, outbox);
+
+            return state;
+        }).withDatabase(tm).withEventPlatform(TestApplicationClientCreator.createEventPlatform(publisher, outbox, null)));
         final TestClient client = testClientAndServer.client();
 
         final TestHttpResponse response = client.post(
@@ -167,9 +177,12 @@ public class HttpTransactionalMessagingTest {
         final InMemoryPublisher publisher = new InMemoryPublisher();
         final InMemoryOutboxStore outbox = new InMemoryOutboxStore().disableDrainer();
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new MultiPayloadTransactionalHandler());
-        }, tm, publisher, outbox);
+
+            return state;
+        }).withDatabase(tm).withEventPlatform(TestApplicationClientCreator.createEventPlatform(publisher, outbox, null)));
         final TestClient client = testClientAndServer.client();
 
         final TestHttpResponse response = client.post(
@@ -194,9 +207,12 @@ public class HttpTransactionalMessagingTest {
     public void shouldFailWhenInsideTxPublishHasNoOutboxRegistered() {
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/tx", Method.POST, state, EchoRequest.class, new MultiPayloadTransactionalHandler());
-        }, tm);
+
+            return state;
+        }).withDatabase(tm));
         final TestClient client = testClientAndServer.client();
 
         final TestHttpResponse response = client.post(

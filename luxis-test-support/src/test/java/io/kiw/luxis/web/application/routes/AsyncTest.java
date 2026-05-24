@@ -32,6 +32,8 @@ import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.R
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.STUB_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class AsyncTest {
@@ -73,9 +75,12 @@ public class AsyncTest {
     public void shouldSupportCorrelatedAsyncMap() {
         final AsyncMapTestHandler handler = new AsyncMapTestHandler();
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/async", Method.POST, state, AsyncMapRequest.class, handler);
-        });
+
+            return state;
+        }));
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
         TestClient luxisTestClient = testClientAndServer.client();
 
@@ -90,9 +95,12 @@ public class AsyncTest {
     @Test
     public void shouldSupportCorrelatedAsyncBlockingMap() {
         AsyncBlockingMapTestHandler handler = new AsyncBlockingMapTestHandler();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/asyncBlocking", Method.POST, state, AsyncMapRequest.class, handler);
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
         final TestHttpResponse response = luxisTestClient.post(
@@ -107,10 +115,13 @@ public class AsyncTest {
     public void shouldReturnErrorWhenAsyncResponseIsError() {
         AsyncMapTestHandler handler = new AsyncMapTestHandler(value -> HttpResult.error(ErrorStatusCode.BAD_REQUEST, new ErrorMessageResponse("async error")));
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/async", Method.POST, state, AsyncMapRequest.class,
                     handler);
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
 
@@ -125,9 +136,12 @@ public class AsyncTest {
     @Test
     public void shouldPassInputValueToHandler() {
         AsyncMapTestHandler handler = new AsyncMapTestHandler();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/async", Method.POST, state, AsyncMapRequest.class, handler);
-        });
+
+            return state;
+        }));
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
         TestClient luxisTestClient = testClientAndServer.client();
 
@@ -142,9 +156,12 @@ public class AsyncTest {
 
     @Test
     public void shouldHandleExceptionInCorrelatedAsyncHandler() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/throw", Method.POST, state, AsyncMapRequest.class, new AsyncThrowTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         final TestHttpResponse response = luxisTestClient.post(
@@ -157,9 +174,12 @@ public class AsyncTest {
     @Test
     public void shouldWorkWithPipelineStepsBeforeCorrelatedAsync() {
         AsyncWithHttpContextTestHandler jsonHandler = new AsyncWithHttpContextTestHandler();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/withContext", Method.POST, state, AsyncMapRequest.class, jsonHandler);
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         jsonHandler.evillyReferenceLuxis(testClientAndServer.luxis());
@@ -178,10 +198,13 @@ public class AsyncTest {
     @Test
     public void shouldHandleStandardClientErrorAndMapToInternalServerError() {
         AsyncMapTestHandler handler = new AsyncMapTestHandler(value -> HttpResult.error(ErrorStatusCode.NOT_FOUND, new ErrorMessageResponse("not found")));
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/async", Method.POST, state, AsyncMapRequest.class,
                     handler);
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
 
@@ -195,9 +218,12 @@ public class AsyncTest {
     public void shouldTimeoutWithCustomOneSecondTimeout() {
         final AsyncCustomTimeoutTestHandler handler = new AsyncCustomTimeoutTestHandler();
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/customTimeout", Method.POST, state, AsyncMapRequest.class, handler);
-        });
+
+            return state;
+        }));
 
         if (STUB_MODE.equals(mode)) {
             handler.setOnRegistered(() -> ((TestLuxis<?>) testClientAndServer.luxis()).advanceTimeBy(201));
@@ -218,9 +244,12 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryTestHandler handler = new AsyncRetryTestHandler(counter, new TestRetryBehaviour().error().error().error().error());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/customTimeout", Method.POST, state, AsyncMapRequest.class, handler);
-        });
+
+            return state;
+        }));
 
 
         final TestClient luxisTestClient = testClientAndServer.client();
@@ -241,9 +270,12 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryTestHandler handler = new AsyncRetryTestHandler(counter, new TestRetryBehaviour().success());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/retry", Method.POST, state, AsyncMapRequest.class, handler);
-        });
+
+            return state;
+        }));
 
         final TestClient luxisTestClient = testClientAndServer.client();
 
@@ -261,9 +293,12 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryTestHandler handler = new AsyncRetryTestHandler(counter, new TestRetryBehaviour().error().error().success());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/retry", Method.POST, state, AsyncMapRequest.class, handler);
-        });
+
+            return state;
+        }));
 
         final TestClient luxisTestClient = testClientAndServer.client();
 
@@ -281,9 +316,12 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryTestHandler handler = new AsyncRetryTestHandler(counter, new TestRetryBehaviour().error().error().error().success());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/retry", Method.POST, state, AsyncMapRequest.class, handler);
-        });
+
+            return state;
+        }));
 
         final TestClient luxisTestClient = testClientAndServer.client();
 
@@ -301,9 +339,12 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryTestHandler handler = new AsyncRetryTestHandler(counter, new TestRetryBehaviour().exception().success());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/retry", Method.POST, state, AsyncMapRequest.class, handler);
-        });
+
+            return state;
+        }));
 
         final TestClient luxisTestClient = testClientAndServer.client();
 
@@ -322,9 +363,12 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryTestHandler handler = new AsyncRetryTestHandler(counter, new TestRetryBehaviour().error().exception().error().success());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/retry", Method.POST, state, AsyncMapRequest.class, handler);
-        });
+
+            return state;
+        }));
 
         final TestClient luxisTestClient = testClientAndServer.client();
 
@@ -347,9 +391,12 @@ public class AsyncTest {
                 .exception()
                 .exception());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/retry", Method.POST, state, AsyncMapRequest.class, handler);
-        });
+
+            return state;
+        }));
 
         final TestClient luxisTestClient = testClientAndServer.client();
 
@@ -366,9 +413,12 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryTestHandler handler = new AsyncRetryTestHandler(counter, new TestRetryBehaviour().exception().error().exception().error());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/retry", Method.POST, state, AsyncMapRequest.class, handler);
-        });
+
+            return state;
+        }));
 
         final TestClient luxisTestClient = testClientAndServer.client();
 
@@ -389,9 +439,12 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryWebSocketRoutes handler = new AsyncRetryWebSocketRoutes(counter, new TestRetryBehaviour().error().error().error().error());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/retry", state, handler);
-        });
+
+            return state;
+        }));
 
         TestClient client = testClientAndServer.client();
 
@@ -413,9 +466,12 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryWebSocketRoutes handler = new AsyncRetryWebSocketRoutes(counter, new TestRetryBehaviour().success());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/retry", state, handler);
-        });
+
+            return state;
+        }));
 
         TestClient client = testClientAndServer.client();
 
@@ -437,9 +493,12 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryWebSocketRoutes handler = new AsyncRetryWebSocketRoutes(counter, new TestRetryBehaviour().error().error().success());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/retry", state, handler);
-        });
+
+            return state;
+        }));
 
         TestClient client = testClientAndServer.client();
 
@@ -461,9 +520,12 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryWebSocketRoutes handler = new AsyncRetryWebSocketRoutes(counter, new TestRetryBehaviour().error().error().error().success());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/retry", state, handler);
-        });
+
+            return state;
+        }));
 
         TestClient client = testClientAndServer.client();
 
@@ -485,9 +547,12 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryWebSocketRoutes handler = new AsyncRetryWebSocketRoutes(counter, new TestRetryBehaviour().exception().success());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/retry", state, handler);
-        });
+
+            return state;
+        }));
 
         TestClient client = testClientAndServer.client();
 
@@ -509,9 +574,12 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryWebSocketRoutes handler = new AsyncRetryWebSocketRoutes(counter, new TestRetryBehaviour().error().exception().error().success());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/retry", state, handler);
-        });
+
+            return state;
+        }));
 
         TestClient client = testClientAndServer.client();
 
@@ -537,9 +605,12 @@ public class AsyncTest {
                 .exception()
                 .exception());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/retry", state, handler);
-        });
+
+            return state;
+        }));
 
         TestClient client = testClientAndServer.client();
 
@@ -562,9 +633,12 @@ public class AsyncTest {
         final AtomicLong counter = new AtomicLong();
         final AsyncRetryWebSocketRoutes handler = new AsyncRetryWebSocketRoutes(counter, new TestRetryBehaviour().exception().error().exception().error());
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/retry", state, handler);
-        });
+
+            return state;
+        }));
 
         TestClient client = testClientAndServer.client();
 

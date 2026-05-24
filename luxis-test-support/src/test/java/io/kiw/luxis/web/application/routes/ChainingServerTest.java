@@ -22,6 +22,9 @@ import java.util.List;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.WebServiceConfigBuilder;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class ChainingServerTest {
@@ -66,19 +69,25 @@ public class ChainingServerTest {
             final LuxisHttpClient httpClient = creator.createHttpClient(mode);
 
             if (i == CHAIN_SIZE - 1) {
-                servers.add(creator.createTestServerAndClient(mode, (r, state) ->
-                                r.jsonRoute("/api/value", Method.GET, state, Void.class, new SimpleGetHandler(42)),
-                        builder -> builder.setPort(port)));
+                servers.add(creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/api/value", Method.GET, state, Void.class, new SimpleGetHandler(42));
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(port).build())));
             } else if (i == 0) {
                 final String secondBaseUrl = "http://" + HOST + ":" + (port + 1);
-                servers.add(creator.createTestServerAndClient(mode, (r, state) ->
-                                r.jsonRoute("/call-next", Method.POST, state, HttpClientGetRequest.class, new HttpClientCallHandler(httpClient, secondBaseUrl)),
-                        builder -> builder.setPort(port)));
+                servers.add(creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/call-next", Method.POST, state, HttpClientGetRequest.class, new HttpClientCallHandler(httpClient, secondBaseUrl));
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(port).build())));
             } else {
                 final String nextUrl = "http://" + HOST + ":" + (port + 1) + "/api/value";
-                servers.add(creator.createTestServerAndClient(mode, (r, state) ->
-                                r.jsonRoute("/api/value", Method.GET, state, Void.class, new ChainForwardGetHandler(httpClient, nextUrl)),
-                        builder -> builder.setPort(port)));
+                servers.add(creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/api/value", Method.GET, state, Void.class, new ChainForwardGetHandler(httpClient, nextUrl));
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(port).build())));
             }
         }
 

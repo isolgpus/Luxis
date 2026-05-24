@@ -26,6 +26,8 @@ import java.util.List;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class FilterOrderTest {
@@ -62,7 +64,8 @@ public class FilterOrderTest {
     public void shouldExecuteFiltersInRegistrationOrder() {
         final List<String> executionOrder = new ArrayList<>();
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/ordered/*", state, e -> e.complete(ctx -> {
                 executionOrder.add("first");
                 ctx.session().addResponseCookie(new HttpCookie("filter-first", "hit"));
@@ -74,7 +77,9 @@ public class FilterOrderTest {
                 return HttpResult.success();
             }));
             r.jsonRoute("/ordered/test", Method.POST, state, TestFilterRequest.class, new TestFilterHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         client.post(StubRequest.request("/ordered/test").body(json().toString()));
@@ -86,7 +91,8 @@ public class FilterOrderTest {
     public void shouldExecuteNarrowAndBroadFiltersInRegistrationOrder() {
         final List<String> executionOrder = new ArrayList<>();
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/a/*", state, e -> e.complete(ctx -> {
                 executionOrder.add("broad");
                 ctx.session().addResponseCookie(new HttpCookie("broad", "hit"));
@@ -98,7 +104,9 @@ public class FilterOrderTest {
                 return HttpResult.success();
             }));
             r.jsonRoute("/a/b/test", Method.GET, state, Void.class, new GetTestFilterHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.get(StubRequest.request("/a/b/test"));
@@ -112,7 +120,8 @@ public class FilterOrderTest {
     public void shouldOnlyExecuteMatchingFilters() {
         final List<String> executionOrder = new ArrayList<>();
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/api/*", state, e -> e.complete(ctx -> {
                 executionOrder.add("api");
                 return HttpResult.success();
@@ -122,7 +131,9 @@ public class FilterOrderTest {
                 return HttpResult.success();
             }));
             r.jsonRoute("/api/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         client.post(StubRequest.request("/api/echo")

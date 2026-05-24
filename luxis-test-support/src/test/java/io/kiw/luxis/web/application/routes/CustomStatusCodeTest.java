@@ -18,6 +18,8 @@ import java.util.Collection;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class CustomStatusCodeTest {
@@ -52,9 +54,12 @@ public class CustomStatusCodeTest {
 
     @Test
     public void shouldAllowHandlerToSetCreatedStatusCode() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/statusCode", Method.POST, state, StatusCodeRequest.class, new StatusCodeTestHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.post(
@@ -68,9 +73,12 @@ public class CustomStatusCodeTest {
 
     @Test
     public void shouldAllowHandlerToSetNoContentStatusCode() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/statusCode", Method.POST, state, StatusCodeRequest.class, new StatusCodeTestHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.post(
@@ -84,9 +92,12 @@ public class CustomStatusCodeTest {
 
     @Test
     public void shouldDefaultToOkWhenStatusCodeNotSet() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/statusCode", Method.POST, state, StatusCodeRequest.class, new StatusCodeTestHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.post(

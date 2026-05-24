@@ -20,6 +20,8 @@ import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.R
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.awaitTrue;
 import static io.kiw.luxis.web.test.TestHelper.json;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class WebSocketSplitTest {
@@ -47,9 +49,12 @@ public class WebSocketSplitTest {
 
     @Test
     public void shouldRouteDifferentMessageTypes() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/split", state, new SplitWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/split"));
@@ -74,9 +79,12 @@ public class WebSocketSplitTest {
 
     @Test
     public void shouldHandleMultipleMessagesOfDifferentTypes() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/split", state, new SplitWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/split"));
@@ -100,9 +108,12 @@ public class WebSocketSplitTest {
 
     @Test
     public void shouldDisconnectOnUnknownType() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/split", state, new SplitWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/split"));
@@ -113,9 +124,12 @@ public class WebSocketSplitTest {
 
     @Test
     public void shouldDisconnectOnInvalidJson() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/split", state, new SplitWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/split"));
@@ -126,9 +140,12 @@ public class WebSocketSplitTest {
 
     @Test
     public void shouldDisconnectOnBadPayload() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/split", state, new SplitWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/split"));
@@ -139,12 +156,15 @@ public class WebSocketSplitTest {
 
     @Test
     public void shouldSendErrorResponseOnUnknownTypeWhenConfigured() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/split", state, new SplitWebSocketRoutes(),
                     new WebSocketRouteConfigBuilder()
                             .corruptInputStrategy(new SendErrorResponse("{\"error\":\"bad input\"}"))
                             .build());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/split"));
@@ -160,12 +180,15 @@ public class WebSocketSplitTest {
 
     @Test
     public void shouldSendErrorResponseOnInvalidJsonWhenConfigured() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/split", state, new SplitWebSocketRoutes(),
                     new WebSocketRouteConfigBuilder()
                             .corruptInputStrategy(new SendErrorResponse("{\"error\":\"bad json\"}"))
                             .build());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/split"));
@@ -182,9 +205,12 @@ public class WebSocketSplitTest {
     @Test
     public void shouldCallOnOpenAndOnClose() {
         final OnCloseTrackingSplitWebSocketRoutes handler = new OnCloseTrackingSplitWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/split", state, handler);
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/split"));
@@ -198,9 +224,12 @@ public class WebSocketSplitTest {
 
     @Test
     public void shouldDisconnectOnMissingType() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/split", state, new SplitWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/split"));

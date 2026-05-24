@@ -38,6 +38,8 @@ import java.util.Collection;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class JsonHttpInfrastructureTest {
@@ -80,9 +82,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldHandlePopulatingJsonValues() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         final String requestBody = json()
@@ -108,9 +113,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReadQueryParamsInPost() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.PUT, state, EchoRequest.class, new PostEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.put(
@@ -134,9 +142,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReadRequestHeaderParamsOnPost() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(
@@ -161,9 +172,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReadRequestHeaderParamsOnPut() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.PUT, state, EchoRequest.class, new PostEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.put(
@@ -188,9 +202,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReadRequestHeaderParamsOnDelete() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.DELETE, state, EchoRequest.class, new PostEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.delete(
@@ -215,9 +232,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReadRequestHeaderParamsOnPatch() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.PATCH, state, EchoRequest.class, new PostEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.patch(
@@ -242,9 +262,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReadRequestHeaderParamsOnGet() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.get(
@@ -268,9 +291,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReadQueryParamsInGet() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.get(
@@ -294,9 +320,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldIgnoreWhenClientSendsUnknownValues() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         final String requestBody = json()
@@ -324,9 +353,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldRespondWithErrorNicelyWhenRequestBodyIsNotPresentOnPost() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(StubRequest.request("/echo"));
@@ -341,9 +373,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldCallGetRoute() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.GET, state, Void.class, new GetEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.get(StubRequest.request("/echo"));
@@ -362,9 +397,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldPopulateResponseHeaders() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         final String request = json()
@@ -381,9 +419,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReadRequestCookies() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(
@@ -404,9 +445,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldPopulateResponseCookie() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(
@@ -419,9 +463,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldMapThroughABlockingCall() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/blocking", Method.POST, state, BlockingRequest.class, new BlockingTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(
@@ -433,9 +480,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldMapThroughABlockingCompleteCall() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/blockingComplete", Method.POST, state, BlockingRequest.class, new BlockingCompleteTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(
@@ -447,9 +497,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReturnWithErrorOnBadRequest() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/failing", Method.POST, state, BlockingRequest.class, new FailingTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(
@@ -465,11 +518,14 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldAccessRequestBodyInHandlerWhenRoutedThroughFilter() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/root/*", state, new TestFilter("rootFilter"));
             r.jsonFilter("/root/filter/*", state, new TestFilter("pathFilter"));
             r.jsonRoute("/root/filter/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         String requestBody = json()
@@ -498,11 +554,14 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldApplyFilterBeforeHandle() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/root/*", state, new TestFilter("rootFilter"));
             r.jsonFilter("/root/filter/*", state, new TestFilter("pathFilter"));
             r.jsonRoute("/root/filter/test", Method.POST, state, TestFilterRequest.class, new TestFilterHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(
@@ -519,11 +578,14 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldApplyFilterBeforeHandleOnGet() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/root/*", state, new TestFilter("rootFilter"));
             r.jsonFilter("/root/filter/*", state, new TestFilter("pathFilter"));
             r.jsonRoute("/root/filter/test", Method.GET, state, Void.class, new GetTestFilterHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.get(
@@ -539,11 +601,14 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldApplyFilterBeforeHandleOnPut() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/root/*", state, new TestFilter("rootFilter"));
             r.jsonFilter("/root/filter/*", state, new TestFilter("pathFilter"));
             r.jsonRoute("/root/filter/test", Method.PUT, state, TestFilterRequest.class, new TestFilterHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.put(
@@ -560,11 +625,14 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldApplyFilterBeforeHandleOnDelete() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/root/*", state, new TestFilter("rootFilter"));
             r.jsonFilter("/root/filter/*", state, new TestFilter("pathFilter"));
             r.jsonRoute("/root/filter/test", Method.DELETE, state, TestFilterRequest.class, new TestFilterHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.delete(
@@ -581,11 +649,14 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldApplyFilterBeforeHandleOnPatch() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/root/*", state, new TestFilter("rootFilter"));
             r.jsonFilter("/root/filter/*", state, new TestFilter("pathFilter"));
             r.jsonRoute("/root/filter/test", Method.PATCH, state, TestFilterRequest.class, new TestFilterHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.patch(
@@ -602,9 +673,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldHandleMalformedJsonRequest() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/throw", Method.POST, state, ThrowRequest.class, new ThrowTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(
@@ -622,9 +696,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldHandleItWhenThrowingAnExceptionWithinTheHandler() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/throw", Method.POST, state, ThrowRequest.class, new ThrowTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(
@@ -641,9 +718,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldHandleItWhenThrowingAnExceptionInMapHandler() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/throw", Method.POST, state, ThrowRequest.class, new ThrowTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(
@@ -660,9 +740,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldHandleItWhenThrowingAnExceptionInBlockingHandler() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/throw", Method.POST, state, ThrowRequest.class, new ThrowTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(
@@ -679,9 +762,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldUploadAFile() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.uploadFileRoute("/upload", Method.POST, state, new FileUploaderHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(
@@ -699,9 +785,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldDownloadFile() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.downloadFileRoute("/download", Method.GET, state, new FileDownloaderHandler(), "text/html; charset=utf-8");
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.get(StubRequest.request("/download"));
@@ -717,9 +806,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldSupportPathParam() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo/:pathExample", Method.GET, state, Void.class, new GetEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.get(
@@ -742,9 +834,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldPassValidationAndReturnResponse() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/validate/:userId", Method.POST, state, ValidationRequest.class, new ValidationTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         String body = json()
@@ -773,9 +868,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReturnValidationErrorForInvalidBodyField() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/validate/:userId", Method.POST, state, ValidationRequest.class, new ValidationTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         String body = json()
@@ -801,9 +899,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReturnValidationErrorForInvalidEmail() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/validate/:userId", Method.POST, state, ValidationRequest.class, new ValidationTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         String body = json()
@@ -829,9 +930,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReturnValidationErrorForNestedField() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/validate/:userId", Method.POST, state, ValidationRequest.class, new ValidationTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         String body = json()
@@ -857,9 +961,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReturnValidationErrorForMissingQueryParam() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/validate/:userId", Method.POST, state, ValidationRequest.class, new ValidationTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         String body = json()
@@ -883,9 +990,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReturnApplicationState() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/state", Method.POST, state, Void.class, new StateTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(StubRequest.request("/state").body("{}"));
@@ -895,10 +1005,13 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldShortCircuitWhenFilterReturnsError() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/protected/*", state, new ErrorFilter());
             r.jsonRoute("/protected/resource", Method.GET, state, Void.class, new GetEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.get(StubRequest.request("/protected/resource"));
@@ -914,9 +1027,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldHandleBlockingFlatMapFailure() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/blockingFailing", Method.POST, state, BlockingRequest.class, new BlockingFlatMapFailHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         TestHttpResponse response = luxisTestClient.post(
@@ -933,9 +1049,12 @@ public class JsonHttpInfrastructureTest {
 
     @Test
     public void shouldReturnValidationErrorForInvalidPathParam() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/validate/:userId", Method.POST, state, ValidationRequest.class, new ValidationTestHandler());
-        });
+
+            return state;
+        }));
         TestClient luxisTestClient = testClientAndServer.client();
 
         String body = json()

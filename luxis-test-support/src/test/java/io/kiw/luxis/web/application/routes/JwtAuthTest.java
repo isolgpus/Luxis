@@ -22,6 +22,8 @@ import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.R
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
 import static org.junit.Assert.assertEquals;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class JwtAuthTest {
@@ -60,9 +62,12 @@ public class JwtAuthTest {
 
     @Test
     public void shouldAllowRequestWithValidJwt() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/jwt/protected", Method.GET, state, Void.class, new JwtProtectedHandler(new StubJwtProvider(JWT_SECRET)));
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
         String token = jwtProvider.generateToken(Map.of("sub", "user123"));
 
@@ -77,9 +82,12 @@ public class JwtAuthTest {
 
     @Test
     public void shouldExposeAllClaimsFromToken() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/jwt/protected", Method.GET, state, Void.class, new JwtProtectedHandler(new StubJwtProvider(JWT_SECRET)));
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
         String token = jwtProvider.generateToken(Map.of("sub", "user456", "role", "admin"));
 
@@ -94,9 +102,12 @@ public class JwtAuthTest {
 
     @Test
     public void shouldRejectRequestWithNoAuthorizationHeader() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/jwt/protected", Method.GET, state, Void.class, new JwtProtectedHandler(new StubJwtProvider(JWT_SECRET)));
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.get(
@@ -112,9 +123,12 @@ public class JwtAuthTest {
 
     @Test
     public void shouldRejectRequestWithMalformedBearerToken() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/jwt/protected", Method.GET, state, Void.class, new JwtProtectedHandler(new StubJwtProvider(JWT_SECRET)));
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.get(
@@ -131,9 +145,12 @@ public class JwtAuthTest {
 
     @Test
     public void shouldRejectRequestWithTokenSignedByDifferentSecret() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/jwt/protected", Method.GET, state, Void.class, new JwtProtectedHandler(new StubJwtProvider(JWT_SECRET)));
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
         StubJwtProvider otherProvider = new StubJwtProvider("a-completely-different-secret");
         String token = otherProvider.generateToken(Map.of("sub", "attacker"));
@@ -152,9 +169,12 @@ public class JwtAuthTest {
 
     @Test
     public void shouldRejectExpiredToken() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/jwt/protected", Method.GET, state, Void.class, new JwtProtectedHandler(new StubJwtProvider(JWT_SECRET)));
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
         long oneHourAgo = System.currentTimeMillis() / 1000 - 3600;
         String token = jwtProvider.generateToken(Map.of("sub", "user789", "exp", oneHourAgo));
@@ -173,9 +193,12 @@ public class JwtAuthTest {
 
     @Test
     public void shouldRejectTokenWithWrongHeaderFormat() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/jwt/protected", Method.GET, state, Void.class, new JwtProtectedHandler(new StubJwtProvider(JWT_SECRET)));
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
         String token = jwtProvider.generateToken(Map.of("sub", "user123"));
 
@@ -193,10 +216,13 @@ public class JwtAuthTest {
 
     @Test
     public void filterShouldAllowRequestWithValidJwt() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/jwt/filter/*", state, new JwtFilter(new StubJwtProvider(JWT_SECRET)));
             r.jsonRoute("/jwt/filter/test", Method.GET, state, Void.class, new JwtFilterProtectedHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
         String token = jwtProvider.generateToken(Map.of("sub", "user123"));
 
@@ -211,10 +237,13 @@ public class JwtAuthTest {
 
     @Test
     public void filterShouldExposeAllClaimsFromToken() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/jwt/filter/*", state, new JwtFilter(new StubJwtProvider(JWT_SECRET)));
             r.jsonRoute("/jwt/filter/test", Method.GET, state, Void.class, new JwtFilterProtectedHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
         String token = jwtProvider.generateToken(Map.of("sub", "user456", "role", "admin"));
 
@@ -229,10 +258,13 @@ public class JwtAuthTest {
 
     @Test
     public void filterShouldRejectRequestWithNoAuthorizationHeader() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/jwt/filter/*", state, new JwtFilter(new StubJwtProvider(JWT_SECRET)));
             r.jsonRoute("/jwt/filter/test", Method.GET, state, Void.class, new JwtFilterProtectedHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.get(
@@ -248,10 +280,13 @@ public class JwtAuthTest {
 
     @Test
     public void filterShouldRejectRequestWithMalformedBearerToken() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/jwt/filter/*", state, new JwtFilter(new StubJwtProvider(JWT_SECRET)));
             r.jsonRoute("/jwt/filter/test", Method.GET, state, Void.class, new JwtFilterProtectedHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.get(
@@ -268,10 +303,13 @@ public class JwtAuthTest {
 
     @Test
     public void filterShouldRejectRequestWithTokenSignedByDifferentSecret() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/jwt/filter/*", state, new JwtFilter(new StubJwtProvider(JWT_SECRET)));
             r.jsonRoute("/jwt/filter/test", Method.GET, state, Void.class, new JwtFilterProtectedHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
         StubJwtProvider otherProvider = new StubJwtProvider("a-completely-different-secret");
         String token = otherProvider.generateToken(Map.of("sub", "attacker"));
@@ -290,10 +328,13 @@ public class JwtAuthTest {
 
     @Test
     public void filterShouldRejectExpiredToken() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/jwt/filter/*", state, new JwtFilter(new StubJwtProvider(JWT_SECRET)));
             r.jsonRoute("/jwt/filter/test", Method.GET, state, Void.class, new JwtFilterProtectedHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
         long oneHourAgo = System.currentTimeMillis() / 1000 - 3600;
         String token = jwtProvider.generateToken(Map.of("sub", "user789", "exp", oneHourAgo));
@@ -312,10 +353,13 @@ public class JwtAuthTest {
 
     @Test
     public void filterShouldRejectTokenWithWrongHeaderFormat() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonFilter("/jwt/filter/*", state, new JwtFilter(new StubJwtProvider(JWT_SECRET)));
             r.jsonRoute("/jwt/filter/test", Method.GET, state, Void.class, new JwtFilterProtectedHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
         String token = jwtProvider.generateToken(Map.of("sub", "user123"));
 

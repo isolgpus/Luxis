@@ -22,6 +22,8 @@ import java.util.Collection;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class HttpSessionTest {
@@ -57,9 +59,12 @@ public class HttpSessionTest {
     @Test
     public void shouldRunAllPipelineStagesOnCorrectContext() {
         final ContextAsserter asserter = TestApplicationClientCreator.createContextAsserter(mode);
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/context", Method.POST, state, ContextRequest.class, new ContextAssertingHttpHandler(asserter));
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         final String requestBody = json()
@@ -78,9 +83,12 @@ public class HttpSessionTest {
     @Test
     public void shouldRunAsyncBlockingMapOnCorrectContext() {
         final ContextAsserter asserter = TestApplicationClientCreator.createContextAsserter(mode);
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/context-async-blocking", Method.POST, state, ContextRequest.class, new ContextAssertingAsyncBlockingHttpHandler(asserter));
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         final String requestBody = json()
@@ -100,9 +108,12 @@ public class HttpSessionTest {
     public void shouldRunCorrelatedAsyncOnCorrectContext() {
         final ContextAsserter asserter = TestApplicationClientCreator.createContextAsserter(mode);
         final ContextAssertingAsyncHttpHandler handler = new ContextAssertingAsyncHttpHandler(asserter);
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/context-correlated", Method.POST, state, ContextRequest.class, handler);
-        });
+
+            return state;
+        }));
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
         TestClient client = testClientAndServer.client();
 
@@ -122,9 +133,12 @@ public class HttpSessionTest {
     @Test
     public void shouldRunPeekAndBlockingPeekOnCorrectContext() {
         final ContextAsserter asserter = TestApplicationClientCreator.createContextAsserter(mode);
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/context-peek", Method.POST, state, ContextRequest.class, new ContextAssertingPeekHttpHandler(asserter));
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         final String requestBody = json()

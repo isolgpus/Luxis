@@ -20,6 +20,8 @@ import java.util.Collection;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class PeekTest {
@@ -59,9 +61,12 @@ public class PeekTest {
     @Test
     public void shouldExecutePeekSideEffectAndPassThroughValue() {
         final PeekTestHandler handler = new PeekTestHandler();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/peek", Method.POST, state, BlockingRequest.class, handler);
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         final String requestBody = json()
@@ -78,9 +83,12 @@ public class PeekTest {
     @Test
     public void shouldExecutePeekSideEffectsOnMultipleRequests() {
         final PeekTestHandler handler = new PeekTestHandler();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/peek", Method.POST, state, BlockingRequest.class, handler);
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         client.post(StubRequest.request("/peek").body(json().put("numberToMultiply", 1).toString()));
@@ -93,9 +101,12 @@ public class PeekTest {
     @Test
     public void shouldExecuteWebSocketPeekSideEffectAndPassThroughValue() {
         final PeekWebSocketRoutes handler = new PeekWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/peek", state, handler);
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/peek"));
@@ -117,9 +128,12 @@ public class PeekTest {
     @Test
     public void shouldExecuteWebSocketPeekSideEffectsOnMultipleMessages() {
         final PeekWebSocketRoutes handler = new PeekWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/peek", state, handler);
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/peek"));

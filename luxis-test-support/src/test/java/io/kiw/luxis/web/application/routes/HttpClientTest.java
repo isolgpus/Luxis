@@ -46,6 +46,9 @@ import static io.kiw.luxis.web.application.routes.Eventually.eventually;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.WebServiceConfigBuilder;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class HttpClientTest {
@@ -88,14 +91,19 @@ public class HttpClientTest {
 
     @Test
     public void shouldCallServerBViaHttpClientGet() {
-        serverB = creator.createTestServerAndClient(mode, (r, state) ->
-                        r.jsonRoute("/api/value", Method.GET, state, Void.class, new SimpleGetHandler(42)),
-                builder -> builder.setPort(SERVER_B_PORT));
+        serverB = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/api/value", Method.GET, state, Void.class, new SimpleGetHandler(42));
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(SERVER_B_PORT).build()));
 
         final LuxisHttpClient httpClient = creator.createHttpClient(mode);
 
-        serverA = creator.createTestServerAndClient(mode, (r, state) ->
-                r.jsonRoute("/call-b", Method.POST, state, HttpClientGetRequest.class, new HttpClientCallHandler(httpClient, SERVER_B_BASE_URL)));
+        serverA = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/call-b", Method.POST, state, HttpClientGetRequest.class, new HttpClientCallHandler(httpClient, SERVER_B_BASE_URL));
+            return state;
+        }));
 
         final TestHttpResponse response = serverA.client().post(
                 StubRequest.request("/call-b")
@@ -111,14 +119,19 @@ public class HttpClientTest {
 
     @Test
     public void shouldForwardPostBodyToServerB() {
-        serverB = creator.createTestServerAndClient(mode, (r, state) ->
-                        r.jsonRoute("/api/multiply", Method.POST, state, SimpleValueRequest.class, new SimpleMultiplyHandler()),
-                builder -> builder.setPort(SERVER_B_PORT));
+        serverB = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/api/multiply", Method.POST, state, SimpleValueRequest.class, new SimpleMultiplyHandler());
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(SERVER_B_PORT).build()));
 
         final LuxisHttpClient httpClient = creator.createHttpClient(mode);
 
-        serverA = creator.createTestServerAndClient(mode, (r, state) ->
-                r.jsonRoute("/forward", Method.POST, state, HttpClientPostRequest.class, new HttpClientPostCallHandler(httpClient, "127.0.0.1:" + SERVER_B_PORT)));
+        serverA = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/forward", Method.POST, state, HttpClientPostRequest.class, new HttpClientPostCallHandler(httpClient, "127.0.0.1:" + SERVER_B_PORT));
+            return state;
+        }));
 
         final String bodyForB = json().put("value", 7).toString();
         final TestHttpResponse response = serverA.client().post(
@@ -138,16 +151,21 @@ public class HttpClientTest {
 
     @Test
     public void shouldCallServerBUsingBaseUrl() {
-        serverB = creator.createTestServerAndClient(mode, (r, state) ->
-                        r.jsonRoute("/api/value", Method.GET, state, Void.class, new SimpleGetHandler(99)),
-                builder -> builder.setPort(SERVER_B_PORT));
+        serverB = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/api/value", Method.GET, state, Void.class, new SimpleGetHandler(99));
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(SERVER_B_PORT).build()));
 
         final LuxisHttpClientConfig config = LuxisHttpClientConfig.defaults()
                 .baseUrl(SERVER_B_BASE_URL);
         final LuxisHttpClient httpClient = creator.createHttpClient(mode, config);
 
-        serverA = creator.createTestServerAndClient(mode, (r, state) ->
-                r.jsonRoute("/call-b", Method.POST, state, HttpClientGetRequest.class, new HttpClientCallHandler(httpClient, "")));
+        serverA = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/call-b", Method.POST, state, HttpClientGetRequest.class, new HttpClientCallHandler(httpClient, ""));
+            return state;
+        }));
 
         final TestHttpResponse response = serverA.client().post(
                 StubRequest.request("/call-b")
@@ -163,17 +181,22 @@ public class HttpClientTest {
 
     @Test
     public void shouldReturnResultErrorWhenErrorAwareAndServerBReturns400() {
-        serverB = creator.createTestServerAndClient(mode, (r, state) ->
-                        r.jsonRoute("/api/error", Method.GET, state, Void.class,
-                                new ErrorHandler(ErrorStatusCode.BAD_REQUEST, "bad input")),
-                builder -> builder.setPort(SERVER_B_PORT));
+        serverB = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/api/error", Method.GET, state, Void.class,
+                                new ErrorHandler(ErrorStatusCode.BAD_REQUEST, "bad input"));
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(SERVER_B_PORT).build()));
 
         final LuxisHttpClientConfig config = LuxisHttpClientConfig.defaults()
                 .errorAwareResponses(true);
         final LuxisHttpClient httpClient = creator.createHttpClient(mode, config);
 
-        serverA = creator.createTestServerAndClient(mode, (r, state) ->
-                r.jsonRoute("/call-error", Method.POST, state, HttpClientGetRequest.class, new HttpClientCallHandler(httpClient, SERVER_B_BASE_URL)));
+        serverA = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/call-error", Method.POST, state, HttpClientGetRequest.class, new HttpClientCallHandler(httpClient, SERVER_B_BASE_URL));
+            return state;
+        }));
 
         final TestHttpResponse response = serverA.client().post(
                 StubRequest.request("/call-error")
@@ -187,15 +210,20 @@ public class HttpClientTest {
 
     @Test
     public void shouldDeserializeTypedResponseFromServerB() {
-        serverB = creator.createTestServerAndClient(mode, (r, state) ->
-                        r.jsonRoute("/api/value", Method.GET, state, Void.class, new SimpleGetHandler(42)),
-                builder -> builder.setPort(SERVER_B_PORT));
+        serverB = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/api/value", Method.GET, state, Void.class, new SimpleGetHandler(42));
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(SERVER_B_PORT).build()));
 
         final LuxisHttpClientConfig config = LuxisHttpClientConfig.defaults();
         final LuxisHttpClient httpClient = creator.createHttpClient(mode, config);
 
-        serverA = creator.createTestServerAndClient(mode, (r, state) ->
-                r.jsonRoute("/call-b-typed", Method.POST, state, HttpClientGetRequest.class, new HttpClientTypedGetHandler(httpClient, SERVER_B_BASE_URL)));
+        serverA = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/call-b-typed", Method.POST, state, HttpClientGetRequest.class, new HttpClientTypedGetHandler(httpClient, SERVER_B_BASE_URL));
+            return state;
+        }));
 
         final TestHttpResponse response = serverA.client().post(
                 StubRequest.request("/call-b-typed")
@@ -210,15 +238,20 @@ public class HttpClientTest {
 
     @Test
     public void shouldHandleServerBReturningError() {
-        serverB = creator.createTestServerAndClient(mode, (r, state) ->
-                        r.jsonRoute("/api/error", Method.GET, state, Void.class,
-                                new ErrorHandler(ErrorStatusCode.BAD_REQUEST, "bad input")),
-                builder -> builder.setPort(SERVER_B_PORT));
+        serverB = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/api/error", Method.GET, state, Void.class,
+                                new ErrorHandler(ErrorStatusCode.BAD_REQUEST, "bad input"));
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(SERVER_B_PORT).build()));
 
         final LuxisHttpClient httpClient = creator.createHttpClient(mode);
 
-        serverA = creator.createTestServerAndClient(mode, (r, state) ->
-                r.jsonRoute("/call-error", Method.POST, state, HttpClientGetRequest.class, new HttpClientCallHandler(httpClient, SERVER_B_BASE_URL)));
+        serverA = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/call-error", Method.POST, state, HttpClientGetRequest.class, new HttpClientCallHandler(httpClient, SERVER_B_BASE_URL));
+            return state;
+        }));
 
         final TestHttpResponse response = serverA.client().post(
                 StubRequest.request("/call-error")
@@ -238,7 +271,8 @@ public class HttpClientTest {
     // --- Direct LuxisHttpClient tests against a single server ---
 
     private LuxisHttpClient createDirectClient() {
-        serverB = creator.createTestServerAndClient(mode, (r, state) -> {
+        serverB = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/api/value", Method.GET, state, Void.class, new SimpleGetHandler(42));
             r.jsonRoute("/api/value", Method.POST, state, Void.class, new SimpleGetHandler(42));
             r.jsonRoute("/api/value", Method.PUT, state, Void.class, new SimpleGetHandler(42));
@@ -260,7 +294,9 @@ public class HttpClientTest {
             r.jsonRoute("/api/throw", Method.PUT, state, Void.class, new AlwaysThrowHandler());
             r.jsonRoute("/api/throw", Method.DELETE, state, Void.class, new AlwaysThrowHandler());
             r.jsonRoute("/api/throw", Method.PATCH, state, Void.class, new AlwaysThrowHandler());
-        }, builder -> builder.setPort(SERVER_B_PORT));
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(SERVER_B_PORT).build()));
 
         final LuxisHttpClientConfig config = LuxisHttpClientConfig.defaults()
                 .baseUrl(SERVER_B_BASE_URL)
@@ -685,9 +721,12 @@ public class HttpClientTest {
 
     @Test
     public void shouldCreateWebsocketConnection() {
-        serverB = creator.createTestServerAndClient(mode, (r, state) -> {
+        serverB = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/echo", state, new EchoWebSocketRoutes());
-        }, builder -> builder.setPort(SERVER_B_PORT));
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(SERVER_B_PORT).build()));
         final LuxisHttpClientConfig config = LuxisHttpClientConfig.defaults()
                 .baseUrl(SERVER_B_BASE_URL);
         final LuxisHttpClient client = creator.createHttpClient(mode, config);
@@ -719,9 +758,11 @@ public class HttpClientTest {
 
     @Test
     public void shouldUploadFilesViaHttpClient() {
-        serverB = creator.createTestServerAndClient(mode, (r, state) ->
-                        r.uploadFileRoute("/upload", Method.POST, state, new FileUploaderHandler()),
-                builder -> builder.setPort(SERVER_B_PORT));
+        serverB = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.uploadFileRoute("/upload", Method.POST, state, new FileUploaderHandler());
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(SERVER_B_PORT).build()));
 
         final LuxisHttpClientConfig config = LuxisHttpClientConfig.defaults()
                 .baseUrl(SERVER_B_BASE_URL);
@@ -747,9 +788,11 @@ public class HttpClientTest {
 
     @Test
     public void shouldDownloadFileViaHttpClient() {
-        serverB = creator.createTestServerAndClient(mode, (r, state) ->
-                        r.downloadFileRoute("/download", Method.GET, state, new FileDownloaderHandler(), "text/html; charset=utf-8"),
-                builder -> builder.setPort(SERVER_B_PORT));
+        serverB = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.downloadFileRoute("/download", Method.GET, state, new FileDownloaderHandler(), "text/html; charset=utf-8");
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(SERVER_B_PORT).build()));
 
         final LuxisHttpClientConfig config = LuxisHttpClientConfig.defaults()
                 .baseUrl(SERVER_B_BASE_URL);

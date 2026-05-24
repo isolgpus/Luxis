@@ -18,6 +18,9 @@ import java.util.Collection;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.WebServiceConfigBuilder;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class MaxBodySizeTest {
@@ -52,9 +55,12 @@ public class MaxBodySizeTest {
 
     @Test
     public void shouldRejectRequestExceedingMaxBodySize() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
-        }, builder -> builder.setMaxBodySize(10));
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setMaxBodySize(10).build()));
         TestClient client = testClientAndServer.client();
 
         TestHttpResponse response = client.post(
@@ -66,9 +72,12 @@ public class MaxBodySizeTest {
 
     @Test
     public void shouldAcceptRequestWithinMaxBodySize() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
-        }, builder -> builder.setMaxBodySize(1000));
+
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setMaxBodySize(1000).build()));
         TestClient client = testClientAndServer.client();
 
         String body = json().put("intExample", 42).put("stringExample", "hello").toString();
@@ -81,9 +90,12 @@ public class MaxBodySizeTest {
 
     @Test
     public void shouldNotEnforceBodyLimitWhenNotConfigured() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/echo", Method.POST, state, EchoRequest.class, new PostEchoHandler());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         String body = json().put("intExample", 42).put("stringExample", "any size body is fine").toString();

@@ -21,6 +21,8 @@ import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.R
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.createContextAsserter;
 import static io.kiw.luxis.web.test.TestHelper.json;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class WebSocketTransactionTest {
@@ -64,9 +66,12 @@ public class WebSocketTransactionTest {
         final ContextAsserter asserter = createContextAsserter(mode);
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/tx", state, new TransactionalWebSocketRoutes(asserter));
-        }, tm);
+
+            return state;
+        }).withDatabase(tm));
         final TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/tx"));
@@ -92,9 +97,12 @@ public class WebSocketTransactionTest {
         final ContextAsserter asserter = createContextAsserter(mode);
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/tx", state, new RollbackOnErrorWebSocketRoutes(asserter));
-        }, tm);
+
+            return state;
+        }).withDatabase(tm));
         final TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/tx"));
@@ -117,9 +125,12 @@ public class WebSocketTransactionTest {
     public void shouldRollbackWhenAsyncMapReturnsFailedFuture() {
         final InMemoryDatabaseClient tm = new InMemoryDatabaseClient();
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/tx", state, new AsyncMapThrowsTransactionalWebSocketRoutes());
-        }, tm);
+
+            return state;
+        }).withDatabase(tm));
         final TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/tx"));

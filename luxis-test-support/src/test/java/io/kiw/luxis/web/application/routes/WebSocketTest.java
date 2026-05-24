@@ -43,6 +43,8 @@ import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.S
 import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
 import static org.junit.Assert.fail;
+import io.kiw.luxis.web.Luxis;
+import io.kiw.luxis.web.test.MyApplicationState;
 
 @RunWith(Parameterized.class)
 public class WebSocketTest {
@@ -70,9 +72,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldEchoWebSocketMessage() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/echo", state, new EchoWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/echo"));
@@ -90,9 +95,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldHandleMultipleMessages() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/echo", state, new EchoWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/echo"));
@@ -114,9 +122,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldSendMessageOnConnect() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/chat/:room", state, new StatefulWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/chat/general"));
@@ -131,9 +142,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldCloseWebSocket() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/chat/:room", state, new StatefulWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/chat/general"));
@@ -151,9 +165,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldThrowWhenNoWebSocketRouteMatches() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/echo", state, new EchoWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         try {
@@ -168,9 +185,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldHandleInvalidJsonGracefully() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/echo", state, new EchoWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/echo"));
@@ -185,9 +205,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldMapThroughBlockingCall() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/blocking", state, new BlockingMapWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/blocking"));
@@ -206,9 +229,12 @@ public class WebSocketTest {
     @Test
     public void shouldMapThroughAsyncMap() {
         final AsyncMapWebSocketRoutes handler = new AsyncMapWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/asyncMap", state, handler);
-        });
+
+            return state;
+        }));
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
         TestClient client = testClientAndServer.client();
 
@@ -228,9 +254,12 @@ public class WebSocketTest {
     @Test
     public void shouldMapThroughAsyncBlockingMap() {
         final AsyncBlockingMapWebSocketRoutes handler = new AsyncBlockingMapWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/asyncBlockingMap", state, handler);
-        });
+
+            return state;
+        }));
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
         TestClient client = testClientAndServer.client();
 
@@ -249,9 +278,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldReturnErrorOnFlatMapFailure() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/flatMapFail", state, new FlatMapFailWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/flatMapFail"));
@@ -269,9 +301,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldReturnErrorOnBlockingFlatMapFailure() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/blockingFlatMapFail", state, new BlockingFlatMapFailWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/blockingFlatMapFail"));
@@ -290,9 +325,12 @@ public class WebSocketTest {
     @Test
     public void shouldReturnErrorOnAsyncFlatMapFailure() {
         final AsyncFlatMapFailWebSocketRoutes handler = new AsyncFlatMapFailWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/asyncFlatMapFail", state, handler);
-        });
+
+            return state;
+        }));
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
         TestClient client = testClientAndServer.client();
 
@@ -312,9 +350,12 @@ public class WebSocketTest {
     @Test
     public void shouldHandleExceptionInMapHandler() {
         final ThrowWebSocketRoutes handler = new ThrowWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/throw", state, handler);
-        });
+
+            return state;
+        }));
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
         TestClient client = testClientAndServer.client();
 
@@ -332,9 +373,12 @@ public class WebSocketTest {
     @Test
     public void shouldHandleExceptionInBlockingHandler() {
         final ThrowWebSocketRoutes handler = new ThrowWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/throw", state, handler);
-        });
+
+            return state;
+        }));
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
         TestClient client = testClientAndServer.client();
 
@@ -352,9 +396,12 @@ public class WebSocketTest {
     @Test
     public void shouldHandleExceptionInAsyncMapHandler() {
         final ThrowWebSocketRoutes handler = new ThrowWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/throw", state, handler);
-        });
+
+            return state;
+        }));
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
         TestClient client = testClientAndServer.client();
 
@@ -372,9 +419,12 @@ public class WebSocketTest {
     @Test
     public void shouldHandleExceptionInAsyncBlockingMapHandler() {
         final ThrowWebSocketRoutes handler = new ThrowWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/throw", state, handler);
-        });
+
+            return state;
+        }));
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
         TestClient client = testClientAndServer.client();
 
@@ -392,9 +442,12 @@ public class WebSocketTest {
     @Test
     public void shouldHandleExceptionInCompleteHandler() {
         final ThrowWebSocketRoutes handler = new ThrowWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/throw", state, handler);
-        });
+
+            return state;
+        }));
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
         TestClient client = testClientAndServer.client();
 
@@ -412,9 +465,12 @@ public class WebSocketTest {
     @Test
     public void shouldNotSendResponseWhenCompleteWithNoResponse() {
         final NoResponseWebSocketRoutes handler = new NoResponseWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/noresponse", state, handler);
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/noresponse"));
@@ -431,9 +487,12 @@ public class WebSocketTest {
     @Test
     public void shouldPassThroughAllStagesWhenNoException() {
         final ThrowWebSocketRoutes handler = new ThrowWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/throw", state, handler);
-        });
+
+            return state;
+        }));
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
         TestClient client = testClientAndServer.client();
 
@@ -452,9 +511,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldPassValidationAndReturnResponse() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/validate", state, new ValidationWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/validate"));
@@ -486,9 +548,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldReturnValidationErrorForInvalidBodyField() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/validate", state, new ValidationWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/validate"));
@@ -519,9 +584,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldReturnValidationErrorForInvalidEmail() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/validate", state, new ValidationWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/validate"));
@@ -552,9 +620,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldReturnValidationErrorForNestedField() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/validate", state, new ValidationWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/validate"));
@@ -585,9 +656,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldReturnValidationErrorForMultipleFields() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/validate", state, new ValidationWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/validate"));
@@ -619,12 +693,15 @@ public class WebSocketTest {
 
     @Test
     public void shouldJustSendValidationErrorByDefault() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/validate", state, new ValidationWebSocketRoutes(),
                     new WebSocketRouteConfigBuilder()
                             .failedValidationStrategy(JustSendValidationError.INSTANCE)
                             .build());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/validate"));
@@ -656,12 +733,15 @@ public class WebSocketTest {
 
     @Test
     public void shouldDisconnectSessionOnValidationFailure() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/validate", state, new ValidationWebSocketRoutes(),
                     new WebSocketRouteConfigBuilder()
                             .failedValidationStrategy(DisconnectSession.INSTANCE)
                             .build());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/validate"));
@@ -684,12 +764,15 @@ public class WebSocketTest {
 
     @Test
     public void shouldSendValidationErrorsAndDisconnectSession() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/validate", state, new ValidationWebSocketRoutes(),
                     new WebSocketRouteConfigBuilder()
                             .failedValidationStrategy(SendValidationErrorsAndDisconnectSession.INSTANCE)
                             .build());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/validate"));
@@ -722,9 +805,12 @@ public class WebSocketTest {
     @Test
     public void shouldRunBlockingCompleteOnWorkerContext() {
         final ContextAsserter asserter = TestApplicationClientCreator.createContextAsserter(mode);
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/blocking-complete", state, new ContextAssertingBlockingCompleteWebSocketRoutes(asserter));
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/blocking-complete"));
@@ -743,9 +829,12 @@ public class WebSocketTest {
     @Test
     public void shouldRunMapAndBlockingMapOnCorrectContext() {
         final ContextAsserter asserter = TestApplicationClientCreator.createContextAsserter(mode);
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/context", state, new ContextAssertingWebSocketRoutes(asserter));
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/context"));
@@ -764,9 +853,12 @@ public class WebSocketTest {
     @Test
     public void shouldRunPeekAndBlockingPeekOnCorrectContext() {
         final ContextAsserter asserter = TestApplicationClientCreator.createContextAsserter(mode);
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/context-peek", state, new ContextAssertingPeekWebSocketRoutes(asserter));
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/context-peek"));
@@ -786,9 +878,12 @@ public class WebSocketTest {
     public void shouldRunAsyncMapOnCorrectContext() {
         final ContextAsserter asserter = TestApplicationClientCreator.createContextAsserter(mode);
         final ContextAssertingAsyncWebSocketRoutes handler = new ContextAssertingAsyncWebSocketRoutes(asserter);
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/context-async", state, handler);
-        });
+
+            return state;
+        }));
         handler.evillyReferenceLuxis(testClientAndServer.luxis());
         TestClient client = testClientAndServer.client();
 
@@ -808,9 +903,12 @@ public class WebSocketTest {
     @Test
     public void shouldTriggerOnCloseWhenClientDisconnects() {
         final OnCloseTrackingWebSocketRoutes handler = new OnCloseTrackingWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/lifecycle", state, handler);
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/lifecycle"));
@@ -827,12 +925,15 @@ public class WebSocketTest {
 
     @Test
     public void shouldSendErrorResponseOnCorruptInputWhenConfigured() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/echo", state, new EchoWebSocketRoutes(),
                     new WebSocketRouteConfigBuilder()
                             .corruptInputStrategy(new SendErrorResponse("{\"error\":\"bad json\"}"))
                             .build());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/echo"));
@@ -849,9 +950,12 @@ public class WebSocketTest {
 
     @Test
     public void shouldDisconnectOnCorruptInputByDefault() {
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/echo", state, new EchoWebSocketRoutes());
-        });
+
+            return state;
+        }));
         TestClient client = testClientAndServer.client();
 
         ws = client.webSocket(StubRequest.request("/ws/echo"));
@@ -868,9 +972,12 @@ public class WebSocketTest {
     public void shouldTimeoutWebSocketWithCustomOneSecondTimeout() {
         final WebSocketCustomTimeoutRoutes handler = new WebSocketCustomTimeoutRoutes();
 
-        testClientAndServer = creator.createTestServerAndClient(mode, (r, state) -> {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
             r.webSocketRoute("/ws/customTimeout", state, handler);
-        });
+
+            return state;
+        }));
 
         if (STUB_MODE.equals(mode)) {
             handler.setOnRegistered(() -> ((TestLuxis<?>) testClientAndServer.luxis()).advanceTimeBy(1_001));

@@ -15,41 +15,6 @@ public final class VertxRoutesRegistrar {
     private VertxRoutesRegistrar() {
     }
 
-    public static <R> R register(final Router router,
-                                 final ApplicationRoutesRegister<R> routesRegisterConsumer,
-                                 final int defaultTimeoutMillis,
-                                 final Consumer<Exception> exceptionHandler,
-                                 final OptionalLong maxBodySize,
-                                 final Optional<CorsConfig> corsConfig,
-                                 final VertxExecutionDispatcher executionDispatcher,
-                                 final PendingAsyncResponses pendingAsyncResponses) {
-        return register(router, routesRegisterConsumer, defaultTimeoutMillis, exceptionHandler, maxBodySize, corsConfig, executionDispatcher, pendingAsyncResponses, null, MessagingComponents.NONE);
-    }
-
-    public static <R> R register(final Router router,
-                                 final ApplicationRoutesRegister<R> routesRegisterConsumer,
-                                 final int defaultTimeoutMillis,
-                                 final Consumer<Exception> exceptionHandler,
-                                 final OptionalLong maxBodySize,
-                                 final Optional<CorsConfig> corsConfig,
-                                 final VertxExecutionDispatcher executionDispatcher,
-                                 final PendingAsyncResponses pendingAsyncResponses,
-                                 final DatabaseClient<?, ?, ?> databaseClient) {
-        return register(router, routesRegisterConsumer, defaultTimeoutMillis, exceptionHandler, maxBodySize, corsConfig, executionDispatcher, pendingAsyncResponses, databaseClient, MessagingComponents.NONE);
-    }
-
-    public static <R> R register(final Router router,
-                                 final ApplicationRoutesRegister<R> routesRegisterConsumer,
-                                 final int defaultTimeoutMillis,
-                                 final Consumer<Exception> exceptionHandler,
-                                 final OptionalLong maxBodySize,
-                                 final Optional<CorsConfig> corsConfig,
-                                 final VertxExecutionDispatcher executionDispatcher,
-                                 final PendingAsyncResponses pendingAsyncResponses,
-                                 final DatabaseClient<?, ?, ?> databaseClient,
-                                 final MessagingComponents messaging) {
-        return registerWithEvents(router, routesRegisterConsumer, defaultTimeoutMillis, exceptionHandler, maxBodySize, corsConfig, executionDispatcher, pendingAsyncResponses, databaseClient, messaging, null).applicationState();
-    }
 
     public static <R> Registration<R> registerWithEvents(final Router router,
                                                          final ApplicationRoutesRegister<R> routesRegisterConsumer,

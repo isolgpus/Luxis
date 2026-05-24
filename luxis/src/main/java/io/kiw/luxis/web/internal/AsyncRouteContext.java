@@ -17,13 +17,6 @@ public final class AsyncRouteContext<IN, APP, SESSION, ERR> extends RouteContext
     private final OutboxStore<?> outboxStore;
     private final OutboxDrainer drainer;
 
-    public AsyncRouteContext(final IN in, final SESSION session, final APP app, final PendingAsyncResponses pendingAsyncResponses, final Function<HttpErrorResponse, ERR> errorMapper) {
-        this(in, session, app, pendingAsyncResponses, errorMapper, null, null, null);
-    }
-
-    public AsyncRouteContext(final IN in, final SESSION session, final APP app, final PendingAsyncResponses pendingAsyncResponses, final Function<HttpErrorResponse, ERR> errorMapper, final DatabaseClient<?, ?, ?> databaseClient) {
-        this(in, session, app, pendingAsyncResponses, errorMapper, databaseClient, null, null);
-    }
 
     public AsyncRouteContext(final IN in, final SESSION session, final APP app, final PendingAsyncResponses pendingAsyncResponses, final Function<HttpErrorResponse, ERR> errorMapper, final DatabaseClient<?, ?, ?> databaseClient, final OutboxStore<?> outboxStore, final OutboxDrainer drainer) {
         super(in, session, app);

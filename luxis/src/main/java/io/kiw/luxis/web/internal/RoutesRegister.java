@@ -4,7 +4,6 @@ import io.kiw.luxis.web.RouteConfig;
 import io.kiw.luxis.web.RouteConfigBuilder;
 import io.kiw.luxis.web.WebSocketRouteConfig;
 import io.kiw.luxis.web.WebSocketRouteConfigBuilder;
-import io.kiw.luxis.web.cors.CorsConfig;
 import io.kiw.luxis.web.db.DatabaseClient;
 import io.kiw.luxis.web.handler.FileDownloadRoute;
 import io.kiw.luxis.web.handler.FileUploadRoute;
@@ -47,14 +46,6 @@ public class RoutesRegister {
     private final MessagingComponents messaging;
     private final LinkedHashMap<String, EventRouteEntry> eventRoutes = new LinkedHashMap<>();
 
-    public RoutesRegister(final RouterWrapper router, final ExecutionDispatcher executionDispatcher, final PendingAsyncResponses pendingAsyncResponses) {
-        this(router, executionDispatcher, pendingAsyncResponses, null, MessagingComponents.NONE);
-    }
-
-    public RoutesRegister(final RouterWrapper router, final ExecutionDispatcher executionDispatcher, final PendingAsyncResponses pendingAsyncResponses, final DatabaseClient<?, ?, ?> databaseClient) {
-        this(router, executionDispatcher, pendingAsyncResponses, databaseClient, MessagingComponents.NONE);
-    }
-
     public RoutesRegister(final RouterWrapper router, final ExecutionDispatcher executionDispatcher, final PendingAsyncResponses pendingAsyncResponses, final DatabaseClient<?, ?, ?> databaseClient, final MessagingComponents messaging) {
         this.router = router;
         this.executionDispatcher = executionDispatcher;
@@ -67,10 +58,6 @@ public class RoutesRegister {
         return databaseClient;
     }
 
-
-    public void cors(final CorsConfig corsConfig) {
-        router.configureCors(corsConfig);
-    }
 
     public <IN, OUT, APP> void jsonRoute(final String path, final Method method, final APP applicationState, final Class<IN> requestType, final JsonHandler<IN, OUT, APP> jsonHandler) {
         jsonRoute(path, method, applicationState, requestType, jsonHandler, new RouteConfigBuilder().build());

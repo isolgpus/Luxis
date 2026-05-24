@@ -7,19 +7,25 @@ import java.util.OptionalLong;
 import java.util.function.Consumer;
 
 public class WebServerConfig {
+    final String host;
     final int port;
     final int defaultTimeoutMillis;
     final Consumer<Exception> exceptionHandler;
     final OptionalLong maxBodySize;
     final Optional<CorsConfig> corsConfig;
 
-    WebServerConfig(final int port, final int defaultTimeoutMillis, final Consumer<Exception> exceptionHandler, final OptionalLong maxBodySize, final Optional<CorsConfig> corsConfig) {
+    WebServerConfig(final String host, final int port, final int defaultTimeoutMillis, final Consumer<Exception> exceptionHandler, final OptionalLong maxBodySize, final Optional<CorsConfig> corsConfig) {
 
+        this.host = host;
         this.port = port;
         this.defaultTimeoutMillis = defaultTimeoutMillis;
         this.exceptionHandler = exceptionHandler;
         this.maxBodySize = maxBodySize;
         this.corsConfig = corsConfig;
+    }
+
+    public String host() {
+        return host;
     }
 
     public int port() {

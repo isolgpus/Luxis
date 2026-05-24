@@ -21,30 +21,28 @@ import io.kiw.luxis.web.test.internal.StubRouter;
 import io.kiw.luxis.web.test.internal.StubTimeoutScheduler;
 import io.vertx.core.Vertx;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class TestLuxis<APP> implements Luxis<APP> {
 
     private final StubRouter router;
     private final APP applicationState;
-    private final Consumer<Exception>[] exceptionHandlerRef;
+    private final List<Exception> seenExceptions;
     private final PendingAsyncResponses pendingAsyncResponses;
     private final StubTimeoutScheduler stubTimeoutScheduler;
     private final TimeInjector timeInjector;
     private final EventConsumerHandler eventConsumerHandler;
     private volatile Vertx vertx;
 
-    @SuppressWarnings("unchecked")
-    TestLuxis(final StubRouter router, final APP applicationState, final Consumer<Exception>[] exceptionHandlerRef, final PendingAsyncResponses pendingAsyncResponses, final StubTimeoutScheduler stubTimeoutScheduler, final TimeInjector timeInjector) {
-        this(router, applicationState, exceptionHandlerRef, pendingAsyncResponses, stubTimeoutScheduler, timeInjector, null);
-    }
-
-    @SuppressWarnings("unchecked")
-    TestLuxis(final StubRouter router, final APP applicationState, final Consumer<Exception>[] exceptionHandlerRef, final PendingAsyncResponses pendingAsyncResponses, final StubTimeoutScheduler stubTimeoutScheduler, final TimeInjector timeInjector, final EventConsumerHandler eventConsumerHandler) {
+    TestLuxis(final StubRouter router, final APP applicationState, final List<Exception> seenExceptions, final PendingAsyncResponses pendingAsyncResponses, final StubTimeoutScheduler stubTimeoutScheduler, final TimeInjector timeInjector, final EventConsumerHandler eventConsumerHandler) {
         this.router = router;
         this.applicationState = applicationState;
-        this.exceptionHandlerRef = exceptionHandlerRef;
+        this.seenExceptions = seenExceptions;
         this.pendingAsyncResponses = pendingAsyncResponses;
         this.stubTimeoutScheduler = stubTimeoutScheduler;
         this.timeInjector = timeInjector;
@@ -52,9 +50,7 @@ public class TestLuxis<APP> implements Luxis<APP> {
     }
 
 
-
-    @SuppressWarnings("unchecked")
-    public static <APP> TestLuxis<APP> from(final LuxisBuilder<APP> builder) {
+    public static <APP> TestLuxis<APP> from(final LuxisBuilder<APP> builder, final StubNetwork network) {
         final WebServerConfig config = builder.getConfig();
         final EventPlatform eventPlatform = builder.getEventPlatform();
         final DatabaseClient<?, ?, ?> databaseClient = builder.getDatabaseClient();
@@ -62,19 +58,24 @@ public class TestLuxis<APP> implements Luxis<APP> {
         final OutboxStore<?> outboxStore = eventPlatform == null ? null : eventPlatform.outboxStore();
         final EventConsumer eventConsumer = eventPlatform == null ? null : eventPlatform.eventConsumer();
 
-        final Consumer<Exception>[] ref = new Consumer[] {config.exceptionHandler()};
+        final List<Exception> seenExceptions = new ArrayList<>();
+        final Consumer<Exception> userHandler = config.exceptionHandler();
+        final Consumer<Exception> handler = e -> {
+            seenExceptions.add(e);
+            userHandler.accept(e);
+        };
         final TimeInjector timeInjector = new TimeInjector();
 
         final StubTimeoutScheduler stubTimeoutScheduler = new StubTimeoutScheduler(timeInjector);
-        final PendingAsyncResponses pendingAsyncResponses = new PendingAsyncResponses(stubTimeoutScheduler, e -> ref[0].accept(e));
+        final PendingAsyncResponses pendingAsyncResponses = new PendingAsyncResponses(stubTimeoutScheduler, handler);
         final StubExecutionDispatcher executionDispatcher = new StubExecutionDispatcher();
 
         final OutboxDrainer drainer = new OutboxDrainer(null, publisher, outboxStore,
-                err -> ref[0].accept(err instanceof Exception ? (Exception) err : new RuntimeException(err)));
+                err -> handler.accept(err instanceof Exception ? (Exception) err : new RuntimeException(err)));
         final MessagingComponents messaging = MessagingComponents.of(publisher, outboxStore, drainer);
 
         final TransactionExecutor transactionExecutor = databaseClient == null ? null : new TransactionExecutor(databaseClient, executionDispatcher, messaging);
-        final StubRouter router = new StubRouter(e -> ref[0].accept(e), pendingAsyncResponses, transactionExecutor, databaseClient, messaging);
+        final StubRouter router = new StubRouter(handler, pendingAsyncResponses, transactionExecutor, databaseClient, messaging);
         config.corsConfig().ifPresent(router::configureCors);
         router.setMaxBodySize(config.maxBodySize());
 
@@ -82,20 +83,41 @@ public class TestLuxis<APP> implements Luxis<APP> {
         final APP applicationState = builder.getRoutes().registerRoutes(routesRegister);
 
         final EventConsumerHandler eventHandler = eventConsumer == null ? null : new EventConsumerHandler(
-                eventConsumer, routesRegister.getEventRoutes(), e -> ref[0].accept(e),
+                eventConsumer, routesRegister.getEventRoutes(), handler,
                 executionDispatcher, pendingAsyncResponses, databaseClient, messaging);
         if (eventHandler != null) {
             eventHandler.start();
         }
 
-        return new TestLuxis<>(router, applicationState, ref, pendingAsyncResponses, stubTimeoutScheduler, timeInjector, eventHandler);
-    }
-    public void setExceptionHandler(final Consumer<Exception> handler) {
-        exceptionHandlerRef[0] = handler;
+        final TestLuxis<APP> testLuxis = new TestLuxis<>(router, applicationState, seenExceptions, pendingAsyncResponses, stubTimeoutScheduler, timeInjector, eventHandler);
+        if (network != null) {
+            network.register(config.host(), config.port(), testLuxis);
+        }
+        return testLuxis;
     }
 
     StubRouter getRouter() {
         return router;
+    }
+
+    public void assertNoMoreExceptions() {
+        if (!seenExceptions.isEmpty()) {
+            throw new AssertionError("Expected to find no exceptions but found " + seenExceptions.stream()
+                    .map(Throwable::getMessage).collect(Collectors.toList()));
+        }
+    }
+
+    public void assertException(final String message) {
+        final Iterator<Exception> iterator = seenExceptions.iterator();
+        while (iterator.hasNext()) {
+            final Exception exception = iterator.next();
+            if (exception.getMessage().contains(message)) {
+                iterator.remove();
+                return;
+            }
+        }
+        throw new AssertionError("Unable to find exception in seen exceptions " + seenExceptions.stream()
+                .map(Throwable::getMessage).collect(Collectors.toList()));
     }
 
     public void advanceTimeBy(final long millis) {

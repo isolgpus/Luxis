@@ -12,12 +12,12 @@ import io.kiw.luxis.web.http.client.LuxisHttpClientConfig;
 import io.kiw.luxis.web.internal.ClientWebSocketHandler;
 import io.kiw.luxis.web.internal.PendingAsyncResponses;
 import io.kiw.luxis.web.test.internal.StubExecutionDispatcher;
+import io.kiw.luxis.web.test.StubNetwork;
 import io.kiw.luxis.web.test.StubRequest;
 import io.kiw.luxis.web.test.StubTestClient;
 import io.kiw.luxis.web.test.StubTestWebSocketClient;
 import io.kiw.luxis.web.test.internal.StubTimeoutScheduler;
 import io.kiw.luxis.web.test.TestHttpResponse;
-import io.kiw.luxis.web.test.TestLuxis;
 import io.kiw.luxis.web.test.TimeInjector;
 import io.kiw.luxis.web.websocket.ClientWebSocketRoutes;
 import io.kiw.luxis.web.websocket.WebSocketConnection;
@@ -31,52 +31,56 @@ import java.util.concurrent.CompletableFuture;
 
 public final class StubLuxisHttpClient implements LuxisHttpClient {
 
-    private final StubTestClient stubTestClient;
+    private final StubNetwork network;
+    private final Map<String, StubTestClient> networkClients = new java.util.concurrent.ConcurrentHashMap<>();
     private final LuxisHttpClientConfig config;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    private StubLuxisHttpClient(final StubTestClient stubTestClient, final LuxisHttpClientConfig config) {
-        this.stubTestClient = stubTestClient;
+    private StubLuxisHttpClient(final StubNetwork network, final LuxisHttpClientConfig config) {
+        this.network = network;
         this.config = config;
     }
 
-    public static StubLuxisHttpClient create(final TestLuxis<?> targetServer) {
 
-        return create(targetServer, LuxisHttpClientConfig.defaults());
+    public static StubLuxisHttpClient create(final StubNetwork network, final LuxisHttpClientConfig config) {
+        return new StubLuxisHttpClient(network, config);
     }
 
-    public static StubLuxisHttpClient create(final TestLuxis<?> targetServer, final LuxisHttpClientConfig config) {
-        return new StubLuxisHttpClient(new StubTestClient(null, 80, targetServer), config);
+    private StubTestClient clientFor(final URI uri) {
+        final String host = uri.getHost();
+        final int port = uri.getPort() != -1 ? uri.getPort() : ("https".equals(uri.getScheme()) ? 443 : 80);
+        final String key = host + ":" + port;
+        return networkClients.computeIfAbsent(key, k -> new StubTestClient(host, port, network));
     }
 
     @Override
     public <T> LuxisAsync<HttpClientResponse<T>, HttpErrorResponse> get(final HttpClientRequest request, final Class<T> responseType) {
-        return send(request, r -> stubTestClient.get(r), responseType);
+        return send(request, StubTestClient::get, responseType);
     }
 
     @Override
     public <T> LuxisAsync<HttpClientResponse<T>, HttpErrorResponse> post(final HttpClientRequest request, final Class<T> responseType) {
-        return send(request, r -> stubTestClient.post(r), responseType);
+        return send(request, StubTestClient::post, responseType);
     }
 
     @Override
     public <T> LuxisAsync<HttpClientResponse<T>, HttpErrorResponse> put(final HttpClientRequest request, final Class<T> responseType) {
-        return send(request, r -> stubTestClient.put(r), responseType);
+        return send(request, StubTestClient::put, responseType);
     }
 
     @Override
     public <T> LuxisAsync<HttpClientResponse<T>, HttpErrorResponse> delete(final HttpClientRequest request, final Class<T> responseType) {
-        return send(request, r -> stubTestClient.delete(r), responseType);
+        return send(request, StubTestClient::delete, responseType);
     }
 
     @Override
     public <T> LuxisAsync<HttpClientResponse<T>, HttpErrorResponse> patch(final HttpClientRequest request, final Class<T> responseType) {
-        return send(request, r -> stubTestClient.patch(r), responseType);
+        return send(request, StubTestClient::patch, responseType);
     }
 
     @Override
     public <T> LuxisAsync<HttpClientResponse<T>, HttpErrorResponse> postFiles(final HttpClientRequest request, final Class<T> responseType) {
-        return send(request, r -> stubTestClient.post(r), responseType);
+        return send(request, StubTestClient::post, responseType);
     }
 
     @Override
@@ -84,6 +88,7 @@ public final class StubLuxisHttpClient implements LuxisHttpClient {
         final String resolvedUrl = resolveUrl(request.getUrl());
         final URI uri = URI.create(resolvedUrl);
         final String path = uri.getPath();
+        final StubTestClient target = clientFor(uri);
 
         final StubRequest stubRequest = StubRequest.request(path);
 
@@ -109,7 +114,7 @@ public final class StubLuxisHttpClient implements LuxisHttpClient {
             }
         }
 
-        final TestHttpResponse testResponse = stubTestClient.get(stubRequest);
+        final TestHttpResponse testResponse = target.get(stubRequest);
         final String rawBody = testResponse.responseBody;
         final int statusCode = testResponse.statusCode;
 
@@ -140,8 +145,9 @@ public final class StubLuxisHttpClient implements LuxisHttpClient {
         final String resolvedUrl = resolveUrl(path);
         final URI uri = URI.create(resolvedUrl);
         final String resolvedPath = uri.getPath();
+        final StubTestClient target = clientFor(uri);
 
-        final StubTestWebSocketClient serverWsClient = stubTestClient.webSocket(StubRequest.request(resolvedPath));
+        final StubTestWebSocketClient serverWsClient = target.webSocket(StubRequest.request(resolvedPath));
         final PendingAsyncResponses pendingAsyncResponses = new PendingAsyncResponses(new StubTimeoutScheduler(new TimeInjector()), e -> {
             throw new RuntimeException(e);
         });
@@ -193,10 +199,11 @@ public final class StubLuxisHttpClient implements LuxisHttpClient {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> LuxisAsync<HttpClientResponse<T>, HttpErrorResponse> send(final HttpClientRequest request, final java.util.function.Function<StubRequest, TestHttpResponse> method, final Class<T> responseType) {
+    private <T> LuxisAsync<HttpClientResponse<T>, HttpErrorResponse> send(final HttpClientRequest request, final java.util.function.BiFunction<StubTestClient, StubRequest, TestHttpResponse> method, final Class<T> responseType) {
         final String resolvedUrl = resolveUrl(request.getUrl());
         final URI uri = URI.create(resolvedUrl);
         final String path = uri.getPath();
+        final StubTestClient target = clientFor(uri);
 
         final StubRequest stubRequest = StubRequest.request(path);
 
@@ -227,7 +234,7 @@ public final class StubLuxisHttpClient implements LuxisHttpClient {
             }
         }
 
-        final TestHttpResponse testResponse = method.apply(stubRequest);
+        final TestHttpResponse testResponse = method.apply(target, stubRequest);
         final String rawBody = testResponse.responseBody;
         final int statusCode = testResponse.statusCode;
 

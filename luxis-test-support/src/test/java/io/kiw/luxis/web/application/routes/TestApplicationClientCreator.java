@@ -20,6 +20,7 @@ import io.kiw.luxis.web.messaging.Publisher;
 import io.kiw.luxis.web.test.ContextAsserter;
 import io.kiw.luxis.web.test.MyApplicationState;
 import io.kiw.luxis.web.test.StubContextAsserter;
+import io.kiw.luxis.web.test.StubNetwork;
 import io.kiw.luxis.web.test.StubTestClient;
 import io.kiw.luxis.web.test.VertxContextAsserter;
 import io.kiw.luxis.web.test.VertxTestClient;
@@ -47,8 +48,7 @@ public class TestApplicationClientCreator {
     }
 
     public static TestClientAndServer createTestServerAndClient(String mode, BiConsumer<RoutesRegister, MyApplicationState> registerRoutes) {
-        final WebServiceConfigBuilder webServiceConfigBuilder = new WebServiceConfigBuilder().setPort(8080);
-        return createTestServerAndClient(mode, registerRoutes, webServiceConfigBuilder.build());
+        return createTestServerAndClient(mode, registerRoutes, defaultBuilder().build(), null, null, null, null, null);
     }
 
     public static ContextAsserter createContextAsserter(String mode) {
@@ -60,69 +60,72 @@ public class TestApplicationClientCreator {
     }
 
     public static TestClientAndServer createTestServerAndClient(String mode, BiConsumer<RoutesRegister, MyApplicationState> registerRoutes, CorsConfig corsConfig) {
-        WebServiceConfigBuilder builder = new WebServiceConfigBuilder().setPort(8080);
+        WebServiceConfigBuilder builder = defaultBuilder();
         if (corsConfig != null) {
             builder.setCorsConfig(corsConfig);
         }
-        return createTestServerAndClient(mode, registerRoutes, builder.build());
+        return createTestServerAndClient(mode, registerRoutes, builder.build(), null, null, null, null, null);
     }
 
     public static TestClientAndServer createTestServerAndClient(String mode, BiConsumer<RoutesRegister, MyApplicationState> registerRoutes, Consumer<WebServiceConfigBuilder> configCustomizer) {
-        WebServiceConfigBuilder builder = new WebServiceConfigBuilder().setPort(8080);
+        return createTestServerAndClient(mode, registerRoutes, configCustomizer, (StubNetwork) null);
+    }
+
+    public static TestClientAndServer createTestServerAndClient(String mode, BiConsumer<RoutesRegister, MyApplicationState> registerRoutes, Consumer<WebServiceConfigBuilder> configCustomizer, StubNetwork network) {
+        WebServiceConfigBuilder builder = defaultBuilder();
         configCustomizer.accept(builder);
-        return createTestServerAndClient(mode, registerRoutes, builder.build());
+        return createTestServerAndClient(mode, registerRoutes, builder.build(), null, null, null, null, network);
     }
 
     public static LuxisHttpClient createHttpClient(String mode, TestClientAndServer targetServer) {
-        if (REAL_MODE.equals(mode)) {
-            return new VertxLuxisHttpClient(Vertx.vertx());
-        } else {
-            return StubLuxisHttpClient.create((TestLuxis<?>) targetServer.luxis());
-        }
+        return createHttpClient(mode, targetServer, LuxisHttpClientConfig.defaults());
     }
 
     public static LuxisHttpClient createHttpClient(String mode, TestClientAndServer targetServer, LuxisHttpClientConfig config) {
         if (REAL_MODE.equals(mode)) {
             return new VertxLuxisHttpClient(Vertx.vertx(), config);
         } else {
-            return StubLuxisHttpClient.create((TestLuxis<?>) targetServer.luxis(), config);
+            return StubLuxisHttpClient.create(targetServer.network(), config);
         }
     }
 
-    private static TestClientAndServer createTestServerAndClient(final String mode, final BiConsumer<RoutesRegister, MyApplicationState> registerRoutes, final WebServerConfig config) {
-        return createTestServerAndClient(mode, registerRoutes, config, null);
+    public static LuxisHttpClient createHttpClient(String mode, StubNetwork network) {
+        return createHttpClient(mode, network, LuxisHttpClientConfig.defaults());
+    }
+
+    public static LuxisHttpClient createHttpClient(String mode, StubNetwork network, LuxisHttpClientConfig config) {
+        if (REAL_MODE.equals(mode)) {
+            return new VertxLuxisHttpClient(Vertx.vertx(), config);
+        } else {
+            return StubLuxisHttpClient.create(network, config);
+        }
     }
 
     public static TestClientAndServer createTestServerAndClient(String mode, BiConsumer<RoutesRegister, MyApplicationState> registerRoutes, DatabaseClient<?, ?, ?> databaseClient) {
-        final WebServiceConfigBuilder webServiceConfigBuilder = new WebServiceConfigBuilder().setPort(8080);
-        return createTestServerAndClient(mode, registerRoutes, webServiceConfigBuilder.build(), databaseClient);
+        return createTestServerAndClient(mode, registerRoutes, defaultBuilder().build(), databaseClient, null, null, null, null);
     }
 
     public static TestClientAndServer createTestServerAndClient(String mode, BiConsumer<RoutesRegister, MyApplicationState> registerRoutes, DatabaseClient<?, ?, ?> databaseClient, Publisher publisher, OutboxStore<?> outboxStore) {
-        final WebServiceConfigBuilder webServiceConfigBuilder = new WebServiceConfigBuilder().setPort(8080);
-        return createTestServerAndClient(mode, registerRoutes, webServiceConfigBuilder.build(), databaseClient, publisher, outboxStore, null);
+        return createTestServerAndClient(mode, registerRoutes, defaultBuilder().build(), databaseClient, publisher, outboxStore, null, null);
     }
 
     public static TestClientAndServer createTestServerAndClient(String mode, int port, BiConsumer<RoutesRegister, MyApplicationState> registerRoutes, DatabaseClient<?, ?, ?> databaseClient, Publisher publisher, OutboxStore<?> outboxStore) {
-        final WebServiceConfigBuilder webServiceConfigBuilder = new WebServiceConfigBuilder().setPort(port);
-        return createTestServerAndClient(mode, registerRoutes, webServiceConfigBuilder.build(), databaseClient, publisher, outboxStore, null);
+        return createTestServerAndClient(mode, registerRoutes, defaultBuilder().setPort(port).build(), databaseClient, publisher, outboxStore, null, null);
     }
 
     public static TestClientAndServer createTestServerAndClient(String mode, BiConsumer<RoutesRegister, MyApplicationState> registerRoutes, DatabaseClient<?, ?, ?> databaseClient, Publisher publisher, OutboxStore<?> outboxStore, EventConsumer eventConsumer) {
-        final WebServiceConfigBuilder webServiceConfigBuilder = new WebServiceConfigBuilder().setPort(8080);
-        return createTestServerAndClient(mode, registerRoutes, webServiceConfigBuilder.build(), databaseClient, publisher, outboxStore, eventConsumer);
+        return createTestServerAndClient(mode, registerRoutes, defaultBuilder().build(), databaseClient, publisher, outboxStore, eventConsumer, null);
     }
 
     public static TestClientAndServer createTestServerAndClient(String mode, BiConsumer<RoutesRegister, MyApplicationState> registerRoutes, int port, DatabaseClient<?, ?, ?> databaseClient, Publisher publisher, OutboxStore<?> outboxStore, EventConsumer eventConsumer) {
-        final WebServiceConfigBuilder webServiceConfigBuilder = new WebServiceConfigBuilder().setPort(port);
-        return createTestServerAndClient(mode, registerRoutes, webServiceConfigBuilder.build(), databaseClient, publisher, outboxStore, eventConsumer);
+        return createTestServerAndClient(mode, registerRoutes, defaultBuilder().setPort(port).build(), databaseClient, publisher, outboxStore, eventConsumer, null);
     }
 
-    private static TestClientAndServer createTestServerAndClient(final String mode, final BiConsumer<RoutesRegister, MyApplicationState> registerRoutes, final WebServerConfig config, final DatabaseClient<?, ?, ?> databaseClient) {
-        return createTestServerAndClient(mode, registerRoutes, config, databaseClient, null, null, null);
+    private static WebServiceConfigBuilder defaultBuilder() {
+        return new WebServiceConfigBuilder().setHost("localhost").setPort(8080);
     }
 
-    private static TestClientAndServer createTestServerAndClient(final String mode, final BiConsumer<RoutesRegister, MyApplicationState> registerRoutes, final WebServerConfig config, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore, final EventConsumer eventConsumer) {
+    private static TestClientAndServer createTestServerAndClient(final String mode, final BiConsumer<RoutesRegister, MyApplicationState> registerRoutes, final WebServerConfig config, final DatabaseClient<?, ?, ?> databaseClient, final Publisher publisher, final OutboxStore<?> outboxStore, final EventConsumer eventConsumer, final StubNetwork providedNetwork) {
         MyApplicationState state = new MyApplicationState();
 
         ApplicationRoutesRegister<MyApplicationState> routes = routesRegister -> {
@@ -134,10 +137,11 @@ public class TestApplicationClientCreator {
         final LuxisBuilder<MyApplicationState> luxisBuilder = Luxis.app(routes).withConfig(config).withDatabase(databaseClient).withEventPlatform(events);
         if (REAL_MODE.equals(mode)) {
             final Luxis<MyApplicationState> luxis = luxisBuilder.start();
-            return new TestClientAndServer(new VertxTestClient("127.0.0.1", config.port()), luxis);
+            return new TestClientAndServer(new VertxTestClient(config.host(), config.port()), luxis, null);
         } else {
-            final Luxis<MyApplicationState> luxis = TestLuxis.from(luxisBuilder);
-            return new TestClientAndServer(new StubTestClient("127.0.0.1", config.port(), luxis), luxis);
+            final StubNetwork network = providedNetwork != null ? providedNetwork : new StubNetwork();
+            final Luxis<MyApplicationState> luxis = TestLuxis.from(luxisBuilder, network);
+            return new TestClientAndServer(new StubTestClient(config.host(), config.port(), network), luxis, network);
         }
     }
 

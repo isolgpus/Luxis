@@ -7,6 +7,7 @@ import java.util.OptionalLong;
 import java.util.function.Consumer;
 
 public class WebServiceConfigBuilder {
+    private String host = "localhost";
     private int port = 8080;
     private int defaultTimeoutMillis = 30_000;
     private Consumer<Exception> exceptionHandler = (e) -> {
@@ -16,6 +17,11 @@ public class WebServiceConfigBuilder {
 
     public WebServiceConfigBuilder setPort(final int port) {
         this.port = port;
+        return this;
+    }
+
+    public WebServiceConfigBuilder setHost(final String host) {
+        this.host = host;
         return this;
     }
 
@@ -30,7 +36,7 @@ public class WebServiceConfigBuilder {
     }
 
     public WebServerConfig build() {
-        return new WebServerConfig(port, defaultTimeoutMillis, exceptionHandler, maxBodySize, corsConfig);
+        return new WebServerConfig(host, port, defaultTimeoutMillis, exceptionHandler, maxBodySize, corsConfig);
     }
 
     public WebServiceConfigBuilder setDefaultBlockingTimeoutMillis(final int timeoutMillis) {

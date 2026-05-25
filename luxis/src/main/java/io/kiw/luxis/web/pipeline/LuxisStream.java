@@ -131,7 +131,7 @@ public class LuxisStream<IN, APP, RESP, ERR, SESSION> {
                 );
             } else {
                 pendingAsyncResponses.scheduleTimeout(config.timeoutMillis, () -> {
-                    resultFuture.completeExceptionally(new RuntimeException("Correlated async response timed out"));
+                    resultFuture.completeExceptionally(new RuntimeException("Async response timed out"));
                 }, ScheduleType.TIMEOUT);
                 final LuxisAsync<OUT, ERR> luxisAsync = handler.handle(ctx);
                 luxisAsync.toCompletableFuture().whenComplete((result, throwable) -> {
@@ -149,7 +149,7 @@ public class LuxisStream<IN, APP, RESP, ERR, SESSION> {
                 return Result.error(errorMessageResponseMapper.map(new ErrorMessageResponse("Something went wrong"), ErrorCause.ASYNC_ERROR));
             });
         };
-        final MapInstruction<IN, OUT, APP, SESSION, ERR> e = MapInstruction.nonBlockingAsync(wrapper, false, httpErr -> errorMessageResponseMapper.map(httpErr.errorMessageValue(), ErrorCause.HTTP_CLIENT_ERROR));
+        final MapInstruction<IN, OUT, APP, SESSION, ERR> e = MapInstruction.nonBlockingAsync(wrapper, false);
         appendInstruction(e);
         return new LuxisStream<>(instructionChain, applicationState, pendingAsyncResponses, errorMessageResponseMapper, ender, databaseClient, messaging);
     }
@@ -182,7 +182,7 @@ public class LuxisStream<IN, APP, RESP, ERR, SESSION> {
                 );
             } else {
                 pendingAsyncResponses.scheduleTimeout(config.timeoutMillis, () -> {
-                    resultFuture.completeExceptionally(new RuntimeException("Correlated async response timed out"));
+                    resultFuture.completeExceptionally(new RuntimeException("Async response timed out"));
                 }, ScheduleType.TIMEOUT);
                 final LuxisAsync<OUT, ERR> luxisAsync = handler.handle(ctx);
                 luxisAsync.toCompletableFuture().whenComplete((result, throwable) -> {
@@ -201,7 +201,7 @@ public class LuxisStream<IN, APP, RESP, ERR, SESSION> {
             });
         };
         final MapInstruction<IN, OUT, Object, SESSION, ERR> e =
-                MapInstruction.blockingAsync(wrapper, (in, session, par) -> new RestrictedBlockingAsyncRouteContext<>(in, par, httpErr -> errorMessageResponseMapper.map(httpErr.errorMessageValue(), ErrorCause.HTTP_CLIENT_ERROR)), false);
+                MapInstruction.blockingAsync(wrapper, (in, session) -> new RestrictedBlockingAsyncRouteContext<>(in), false);
         appendInstruction(e);
         return new LuxisStream<>(instructionChain, applicationState, pendingAsyncResponses, errorMessageResponseMapper, ender, databaseClient, messaging);
     }

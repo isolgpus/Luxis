@@ -1,22 +1,16 @@
 package io.kiw.luxis.web.application.routes;
 
 import io.kiw.luxis.web.test.TestLuxis;
-import io.kiw.luxis.web.http.ErrorMessageResponse;
-import io.kiw.luxis.web.http.ErrorStatusCode;
-import io.kiw.luxis.web.http.HttpResult;
 import io.kiw.luxis.web.http.Method;
 import io.kiw.luxis.web.test.StubRequest;
 import io.kiw.luxis.web.test.TestClient;
 import io.kiw.luxis.web.test.TestHttpResponse;
 import io.kiw.luxis.web.test.TestWebSocketClient;
-import io.kiw.luxis.web.test.handler.AsyncBlockingMapTestHandler;
 import io.kiw.luxis.web.test.handler.AsyncCustomTimeoutTestHandler;
 import io.kiw.luxis.web.test.handler.AsyncMapRequest;
-import io.kiw.luxis.web.test.handler.AsyncMapTestHandler;
 import io.kiw.luxis.web.test.handler.AsyncRetryTestHandler;
 import io.kiw.luxis.web.test.handler.AsyncRetryWebSocketRoutes;
 import io.kiw.luxis.web.test.handler.AsyncThrowTestHandler;
-import io.kiw.luxis.web.test.handler.AsyncWithHttpContextTestHandler;
 import io.kiw.luxis.web.test.handler.TestRetryBehaviour;
 import org.junit.After;
 import org.junit.Assert;
@@ -72,90 +66,7 @@ public class AsyncTest {
     }
 
     @Test
-    public void shouldSupportCorrelatedAsyncMap() {
-        final AsyncMapTestHandler handler = new AsyncMapTestHandler();
-
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.jsonRoute("/async", Method.POST, state, AsyncMapRequest.class, handler);
-
-            return state;
-        }));
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-        TestClient luxisTestClient = testClientAndServer.client();
-
-        final TestHttpResponse response = luxisTestClient.post(
-                StubRequest.request("/async").body(json().put("value", 5).toString()));
-
-        Assert.assertEquals(
-                TestHttpResponse.response(json().put("result", 50).toString()),
-                response);
-    }
-
-    @Test
-    public void shouldSupportCorrelatedAsyncBlockingMap() {
-        AsyncBlockingMapTestHandler handler = new AsyncBlockingMapTestHandler();
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.jsonRoute("/asyncBlocking", Method.POST, state, AsyncMapRequest.class, handler);
-
-            return state;
-        }));
-        TestClient luxisTestClient = testClientAndServer.client();
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-        final TestHttpResponse response = luxisTestClient.post(
-                StubRequest.request("/asyncBlocking").body(json().put("value", 3).toString()));
-
-        Assert.assertEquals(
-                TestHttpResponse.response(json().put("result", 60).toString()),
-                response);
-    }
-
-    @Test
-    public void shouldReturnErrorWhenAsyncResponseIsError() {
-        AsyncMapTestHandler handler = new AsyncMapTestHandler(value -> HttpResult.error(ErrorStatusCode.BAD_REQUEST, new ErrorMessageResponse("async error")));
-
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.jsonRoute("/async", Method.POST, state, AsyncMapRequest.class,
-                    handler);
-
-            return state;
-        }));
-        TestClient luxisTestClient = testClientAndServer.client();
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-
-        final TestHttpResponse response = luxisTestClient.post(
-                StubRequest.request("/async").body(json().put("value", 5).toString()));
-
-        Assert.assertEquals(
-                TestHttpResponse.response(json().put("message", "async error").set("errors", json()).toString()).withStatusCode(500),
-                response);
-    }
-
-    @Test
-    public void shouldPassInputValueToHandler() {
-        AsyncMapTestHandler handler = new AsyncMapTestHandler();
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.jsonRoute("/async", Method.POST, state, AsyncMapRequest.class, handler);
-
-            return state;
-        }));
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-        TestClient luxisTestClient = testClientAndServer.client();
-
-        TestHttpResponse response = luxisTestClient.post(
-                StubRequest.request("/async").body(json().put("value", 42).toString()));
-
-        Assert.assertEquals(
-                TestHttpResponse.response(json().put("result", 420).toString()).withStatusCode(200),
-                response);
-    }
-
-
-    @Test
-    public void shouldHandleExceptionInCorrelatedAsyncHandler() {
+    public void shouldHandleExceptionInAsyncMapHandler() {
         testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
             final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/throw", Method.POST, state, AsyncMapRequest.class, new AsyncThrowTestHandler());
@@ -169,49 +80,6 @@ public class AsyncTest {
 
         Assert.assertEquals(500, response.statusCode);
         luxisTestClient.assertException("app error in asyncMap");
-    }
-
-    @Test
-    public void shouldWorkWithPipelineStepsBeforeCorrelatedAsync() {
-        AsyncWithHttpContextTestHandler jsonHandler = new AsyncWithHttpContextTestHandler();
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.jsonRoute("/withContext", Method.POST, state, AsyncMapRequest.class, jsonHandler);
-
-            return state;
-        }));
-        TestClient luxisTestClient = testClientAndServer.client();
-
-        jsonHandler.evillyReferenceLuxis(testClientAndServer.luxis());
-
-        final TestHttpResponse response = luxisTestClient.post(
-                StubRequest.request("/withContext")
-                        .body(json().put("value", 7).toString())
-                        .queryParam("multiplier", "3"));
-
-        // multiplier=3, handler responds with 3 * 7 = 21
-        Assert.assertEquals(
-                TestHttpResponse.response(json().put("result", 21).toString()),
-                response);
-    }
-
-    @Test
-    public void shouldHandleStandardClientErrorAndMapToInternalServerError() {
-        AsyncMapTestHandler handler = new AsyncMapTestHandler(value -> HttpResult.error(ErrorStatusCode.NOT_FOUND, new ErrorMessageResponse("not found")));
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.jsonRoute("/async", Method.POST, state, AsyncMapRequest.class,
-                    handler);
-
-            return state;
-        }));
-        TestClient luxisTestClient = testClientAndServer.client();
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-
-        final TestHttpResponse response = luxisTestClient.post(
-                StubRequest.request("/async").body(json().put("value", 1).toString()));
-
-        Assert.assertEquals(500, response.statusCode);
     }
 
     @Test
@@ -235,7 +103,7 @@ public class AsyncTest {
                 StubRequest.request("/customTimeout").body(json().put("value", 1).toString()));
 
         Assert.assertEquals(500, response.statusCode);
-        luxisTestClient.assertException("Correlated async response timed out");
+        luxisTestClient.assertException("Async response timed out");
     }
 
     @Test

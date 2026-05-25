@@ -74,7 +74,7 @@ public final class LuxisBuilder<APP> {
         }
 
         httpServer.requestHandler(router).listen(config.port).toCompletionStage().toCompletableFuture().join();
-        return new VertxLuxis<>(vertx, executionDispatcher, applicationState, pendingAsyncResponses, () -> {
+        return new VertxLuxis<>(vertx, executionDispatcher, applicationState, () -> {
             if (eventHandler != null) {
                 eventHandler.close();
             }

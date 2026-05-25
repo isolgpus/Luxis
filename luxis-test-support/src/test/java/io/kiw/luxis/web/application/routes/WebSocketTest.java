@@ -11,12 +11,8 @@ import io.kiw.luxis.web.test.StubRequest;
 import io.kiw.luxis.web.test.TestClient;
 import io.kiw.luxis.web.test.TestHelper;
 import io.kiw.luxis.web.test.TestWebSocketClient;
-import io.kiw.luxis.web.test.handler.AsyncBlockingMapWebSocketRoutes;
-import io.kiw.luxis.web.test.handler.AsyncFlatMapFailWebSocketRoutes;
-import io.kiw.luxis.web.test.handler.AsyncMapWebSocketRoutes;
 import io.kiw.luxis.web.test.handler.BlockingFlatMapFailWebSocketRoutes;
 import io.kiw.luxis.web.test.handler.BlockingMapWebSocketRoutes;
-import io.kiw.luxis.web.test.handler.ContextAssertingAsyncWebSocketRoutes;
 import io.kiw.luxis.web.test.handler.ContextAssertingBlockingCompleteWebSocketRoutes;
 import io.kiw.luxis.web.test.handler.ContextAssertingPeekWebSocketRoutes;
 import io.kiw.luxis.web.test.handler.ContextAssertingWebSocketRoutes;
@@ -25,7 +21,6 @@ import io.kiw.luxis.web.test.handler.FlatMapFailWebSocketRoutes;
 import io.kiw.luxis.web.test.handler.NoResponseWebSocketRoutes;
 import io.kiw.luxis.web.test.handler.OnCloseTrackingWebSocketRoutes;
 import io.kiw.luxis.web.test.handler.StatefulWebSocketRoutes;
-import io.kiw.luxis.web.test.handler.ThrowWebSocketRoutes;
 import io.kiw.luxis.web.test.handler.ValidationWebSocketRoutes;
 import io.kiw.luxis.web.test.handler.WebSocketCustomTimeoutRoutes;
 import org.junit.After;
@@ -227,56 +222,6 @@ public class WebSocketTest {
     }
 
     @Test
-    public void shouldMapThroughAsyncMap() {
-        final AsyncMapWebSocketRoutes handler = new AsyncMapWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.webSocketRoute("/ws/asyncMap", state, handler);
-
-            return state;
-        }));
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-        TestClient client = testClientAndServer.client();
-
-        ws = client.webSocket(StubRequest.request("/ws/asyncMap"));
-        ws.send("{\"type\":\"number\",\"payload\":{\"value\":5}}");
-
-        ws.onResponses(received -> {
-            Assert.assertEquals(1, received.size());
-            Assert.assertEquals(
-                    json().put("type", "numberResponse").set("payload", json().put("result", 50)).toString(),
-                    received.get(0));
-
-            client.assertNoMoreExceptions();
-        });
-    }
-
-    @Test
-    public void shouldMapThroughAsyncBlockingMap() {
-        final AsyncBlockingMapWebSocketRoutes handler = new AsyncBlockingMapWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.webSocketRoute("/ws/asyncBlockingMap", state, handler);
-
-            return state;
-        }));
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-        TestClient client = testClientAndServer.client();
-
-        ws = client.webSocket(StubRequest.request("/ws/asyncBlockingMap"));
-        ws.send("{\"type\":\"number\",\"payload\":{\"value\":3}}");
-
-        ws.onResponses(received -> {
-            Assert.assertEquals(1, received.size());
-            Assert.assertEquals(
-                    json().put("type", "numberResponse").set("payload", json().put("result", 60)).toString(),
-                    received.get(0));
-
-            client.assertNoMoreExceptions();
-        });
-    }
-
-    @Test
     public void shouldReturnErrorOnFlatMapFailure() {
         testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
             final MyApplicationState state = new MyApplicationState();
@@ -323,146 +268,6 @@ public class WebSocketTest {
     }
 
     @Test
-    public void shouldReturnErrorOnAsyncFlatMapFailure() {
-        final AsyncFlatMapFailWebSocketRoutes handler = new AsyncFlatMapFailWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.webSocketRoute("/ws/asyncFlatMapFail", state, handler);
-
-            return state;
-        }));
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-        TestClient client = testClientAndServer.client();
-
-        ws = client.webSocket(StubRequest.request("/ws/asyncFlatMapFail"));
-        ws.send("{\"type\":\"echo\",\"payload\":{\"message\":\"hello\"}}");
-
-        ws.onResponses(received -> {
-            Assert.assertEquals(1, received.size());
-            Assert.assertEquals(
-                    json().put("type", "error").set("payload", json().put("message", "async flatMap failed").set("errors", json())).toString(),
-                    received.get(0));
-
-            client.assertNoMoreExceptions();
-        });
-    }
-
-    @Test
-    public void shouldHandleExceptionInMapHandler() {
-        final ThrowWebSocketRoutes handler = new ThrowWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.webSocketRoute("/ws/throw", state, handler);
-
-            return state;
-        }));
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-        TestClient client = testClientAndServer.client();
-
-        ws = client.webSocket(StubRequest.request("/ws/throw"));
-        ws.send("{\"type\":\"throw\",\"payload\":{\"where\":\"map\"}}");
-
-        ws.onResponses(received -> {
-            Assert.assertEquals(0, received.size());
-
-            client.assertException("app error in map");
-            client.assertNoMoreExceptions();
-        });
-    }
-
-    @Test
-    public void shouldHandleExceptionInBlockingHandler() {
-        final ThrowWebSocketRoutes handler = new ThrowWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.webSocketRoute("/ws/throw", state, handler);
-
-            return state;
-        }));
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-        TestClient client = testClientAndServer.client();
-
-        ws = client.webSocket(StubRequest.request("/ws/throw"));
-        ws.send("{\"type\":\"throw\",\"payload\":{\"where\":\"blocking\"}}");
-
-        ws.onResponses(received -> {
-            Assert.assertEquals(0, received.size());
-
-            client.assertException("app error in blocking");
-            client.assertNoMoreExceptions();
-        });
-    }
-
-    @Test
-    public void shouldHandleExceptionInAsyncMapHandler() {
-        final ThrowWebSocketRoutes handler = new ThrowWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.webSocketRoute("/ws/throw", state, handler);
-
-            return state;
-        }));
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-        TestClient client = testClientAndServer.client();
-
-        ws = client.webSocket(StubRequest.request("/ws/throw"));
-        ws.send("{\"type\":\"throw\",\"payload\":{\"where\":\"asyncMap\"}}");
-
-        ws.onResponses(received -> {
-            Assert.assertEquals(0, received.size());
-
-            client.assertException("app error in asyncMap");
-            client.assertNoMoreExceptions();
-        });
-    }
-
-    @Test
-    public void shouldHandleExceptionInAsyncBlockingMapHandler() {
-        final ThrowWebSocketRoutes handler = new ThrowWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.webSocketRoute("/ws/throw", state, handler);
-
-            return state;
-        }));
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-        TestClient client = testClientAndServer.client();
-
-        ws = client.webSocket(StubRequest.request("/ws/throw"));
-        ws.send("{\"type\":\"throw\",\"payload\":{\"where\":\"asyncBlockingMap\"}}");
-
-        ws.onResponses(received -> {
-            Assert.assertEquals(0, received.size());
-
-            client.assertException("app error in asyncBlockingMap");
-            client.assertNoMoreExceptions();
-        });
-    }
-
-    @Test
-    public void shouldHandleExceptionInCompleteHandler() {
-        final ThrowWebSocketRoutes handler = new ThrowWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.webSocketRoute("/ws/throw", state, handler);
-
-            return state;
-        }));
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-        TestClient client = testClientAndServer.client();
-
-        ws = client.webSocket(StubRequest.request("/ws/throw"));
-        ws.send("{\"type\":\"throw\",\"payload\":{\"where\":\"complete\"}}");
-
-        ws.onResponses(received -> {
-            Assert.assertEquals(0, received.size());
-
-            client.assertException("app error in complete");
-            client.assertNoMoreExceptions();
-        });
-    }
-
-    @Test
     public void shouldNotSendResponseWhenCompleteWithNoResponse() {
         final NoResponseWebSocketRoutes handler = new NoResponseWebSocketRoutes();
         testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
@@ -479,31 +284,6 @@ public class WebSocketTest {
         ws.onResponses(received -> {
             Assert.assertEquals(0, received.size());
             Assert.assertTrue(handler.messageReceived);
-
-            client.assertNoMoreExceptions();
-        });
-    }
-
-    @Test
-    public void shouldPassThroughAllStagesWhenNoException() {
-        final ThrowWebSocketRoutes handler = new ThrowWebSocketRoutes();
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.webSocketRoute("/ws/throw", state, handler);
-
-            return state;
-        }));
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-        TestClient client = testClientAndServer.client();
-
-        ws = client.webSocket(StubRequest.request("/ws/throw"));
-        ws.send("{\"type\":\"throw\",\"payload\":{\"where\":\"none\"}}");
-
-        ws.onResponses(received -> {
-            Assert.assertEquals(1, received.size());
-            Assert.assertEquals(
-                    json().put("type", "echoResponse").set("payload", json().put("echo", "ok")).toString(),
-                    received.get(0));
 
             client.assertNoMoreExceptions();
         });
@@ -875,32 +655,6 @@ public class WebSocketTest {
     }
 
     @Test
-    public void shouldRunAsyncMapOnCorrectContext() {
-        final ContextAsserter asserter = TestApplicationClientCreator.createContextAsserter(mode);
-        final ContextAssertingAsyncWebSocketRoutes handler = new ContextAssertingAsyncWebSocketRoutes(asserter);
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.webSocketRoute("/ws/context-async", state, handler);
-
-            return state;
-        }));
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-        TestClient client = testClientAndServer.client();
-
-        ws = client.webSocket(StubRequest.request("/ws/context-async"));
-        ws.send("{\"type\":\"echo\",\"payload\":{\"message\":\"hello\"}}");
-
-        ws.onResponses(received -> {
-            Assert.assertEquals(1, received.size());
-            Assert.assertEquals(
-                    json().put("type", "echoResponse").set("payload", json().put("echo", "hello asyncmap async2 async3 blocking")).toString(),
-                    received.get(0));
-
-            client.assertNoMoreExceptions();
-        });
-    }
-
-    @Test
     public void shouldTriggerOnCloseWhenClientDisconnects() {
         final OnCloseTrackingWebSocketRoutes handler = new OnCloseTrackingWebSocketRoutes();
         testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
@@ -994,7 +748,7 @@ public class WebSocketTest {
                     json().put("type", "error").set("payload", json().put("message", "Something went wrong").set("errors", json())).toString(),
                     received.get(0));
 
-            client.assertException("Correlated async response timed out");
+            client.assertException("Async response timed out");
         });
     }
 

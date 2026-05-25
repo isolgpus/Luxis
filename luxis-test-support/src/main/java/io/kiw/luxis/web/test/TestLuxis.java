@@ -1,11 +1,9 @@
 package io.kiw.luxis.web.test;
 
-import io.kiw.luxis.result.Result;
 import io.kiw.luxis.web.Luxis;
 import io.kiw.luxis.web.LuxisBuilder;
 import io.kiw.luxis.web.WebServerConfig;
 import io.kiw.luxis.web.db.DatabaseClient;
-import io.kiw.luxis.web.http.HttpErrorResponse;
 import io.kiw.luxis.web.internal.EventConsumerHandler;
 import io.kiw.luxis.web.internal.MessagingComponents;
 import io.kiw.luxis.web.internal.OutboxDrainer;
@@ -130,12 +128,6 @@ public class TestLuxis<APP> implements Luxis<APP> {
     public <IN> void apply(final IN immutableState, final BiConsumer<IN, APP> applicationStateConsumer) {
         applicationStateConsumer.accept(immutableState, applicationState);
     }
-
-    @Override
-    public <T> void handleAsyncResponse(final long correlationId, final Result<HttpErrorResponse, T> result) {
-        pendingAsyncResponses.complete(correlationId, result);
-    }
-
 
     @Override
     public synchronized Vertx getVertx() {

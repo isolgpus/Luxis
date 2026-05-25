@@ -6,7 +6,6 @@ import io.kiw.luxis.web.test.StubRequest;
 import io.kiw.luxis.web.test.TestClient;
 import io.kiw.luxis.web.test.TestHttpResponse;
 import io.kiw.luxis.web.test.handler.ContextAssertingAsyncBlockingHttpHandler;
-import io.kiw.luxis.web.test.handler.ContextAssertingAsyncHttpHandler;
 import io.kiw.luxis.web.test.handler.ContextAssertingHttpHandler;
 import io.kiw.luxis.web.test.handler.ContextAssertingPeekHttpHandler;
 import io.kiw.luxis.web.test.handler.ContextRequest;
@@ -99,32 +98,6 @@ public class HttpSessionTest {
 
         final String expectedResponse = json()
                 .put("result", "hello blocking map")
-                .toString();
-
-        Assert.assertEquals(TestHttpResponse.response(expectedResponse), response);
-    }
-
-    @Test
-    public void shouldRunCorrelatedAsyncOnCorrectContext() {
-        final ContextAsserter asserter = TestApplicationClientCreator.createContextAsserter(mode);
-        final ContextAssertingAsyncHttpHandler handler = new ContextAssertingAsyncHttpHandler(asserter);
-        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
-            final MyApplicationState state = new MyApplicationState();
-            r.jsonRoute("/context-correlated", Method.POST, state, ContextRequest.class, handler);
-
-            return state;
-        }));
-        handler.evillyReferenceLuxis(testClientAndServer.luxis());
-        TestClient client = testClientAndServer.client();
-
-        final String requestBody = json()
-                .put("message", "hello")
-                .toString();
-
-        TestHttpResponse response = client.post(StubRequest.request("/context-correlated").body(requestBody));
-
-        final String expectedResponse = json()
-                .put("result", "hello async blocking asyncBlocking map")
                 .toString();
 
         Assert.assertEquals(TestHttpResponse.response(expectedResponse), response);

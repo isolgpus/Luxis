@@ -29,7 +29,6 @@ import io.kiw.luxis.web.test.handler.TestFilterHandler;
 import io.kiw.luxis.web.test.handler.TestFilterRequest;
 import io.kiw.luxis.web.test.handler.ThrowRequest;
 import io.kiw.luxis.web.test.handler.ThrowTestHandler;
-import io.kiw.luxis.web.test.handler.ThrowWebSocketRoutes;
 import io.kiw.luxis.web.test.handler.TimeoutTestHandler;
 import io.kiw.luxis.web.test.handler.ValidationRequest;
 import io.kiw.luxis.web.test.handler.ValidationTestHandler;
@@ -78,7 +77,6 @@ public final class TestApplicationRoutes {
         routesRegister.webSocketRoute("/ws/blocking", state, new BlockingMapWebSocketRoutes());
         routesRegister.webSocketRoute("/ws/flatMapFail", state, new FlatMapFailWebSocketRoutes());
         routesRegister.webSocketRoute("/ws/blockingFlatMapFail", state, new BlockingFlatMapFailWebSocketRoutes());
-        routesRegister.webSocketRoute("/ws/throw", state, new ThrowWebSocketRoutes());
         routesRegister.jsonRoute("/statusCode", Method.POST, state, StatusCodeRequest.class, new StatusCodeTestHandler());
         routesRegister.jsonRoute("/jwt/protected", Method.GET, state, Void.class, new JwtProtectedHandler(jwtProvider));
         routesRegister.jsonRoute("/jwt/filter/test", Method.GET, state, Void.class, new JwtFilterProtectedHandler());

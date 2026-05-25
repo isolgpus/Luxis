@@ -44,14 +44,15 @@ public class RoutesRegister {
     private final PendingAsyncResponses pendingAsyncResponses;
     private final DatabaseClient<?, ?, ?> databaseClient;
     private final MessagingComponents messaging;
-    private final LinkedHashMap<String, EventRouteEntry> eventRoutes = new LinkedHashMap<>();
+    private final LinkedHashMap<String, EventRouteEntry> eventRoutes;
 
-    public RoutesRegister(final RouterWrapper router, final ExecutionDispatcher executionDispatcher, final PendingAsyncResponses pendingAsyncResponses, final DatabaseClient<?, ?, ?> databaseClient, final MessagingComponents messaging) {
+    public RoutesRegister(final RouterWrapper router, final ExecutionDispatcher executionDispatcher, final PendingAsyncResponses pendingAsyncResponses, final DatabaseClient<?, ?, ?> databaseClient, final MessagingComponents messaging, final LinkedHashMap<String, EventRouteEntry> eventRoutes) {
         this.router = router;
         this.executionDispatcher = executionDispatcher;
         this.pendingAsyncResponses = pendingAsyncResponses;
         this.databaseClient = databaseClient;
         this.messaging = messaging != null ? messaging : MessagingComponents.NONE;
+        this.eventRoutes = eventRoutes;
     }
 
     public DatabaseClient<?, ?, ?> getDatabaseClient() {
@@ -153,24 +154,9 @@ public class RoutesRegister {
         eventRoutes.put(key, new EventRouteEntry(pipeline, messageType));
     }
 
-    public Map<String, EventRouteEntry> getEventRoutes() {
-        return eventRoutes;
-    }
-
     public record EventRouteEntry(LuxisPipeline<?> pipeline, Class<?> messageType) {
     }
 
-    public ExecutionDispatcher getExecutionDispatcher() {
-        return executionDispatcher;
-    }
-
-    public PendingAsyncResponses getPendingAsyncResponses() {
-        return pendingAsyncResponses;
-    }
-
-    public MessagingComponents getMessaging() {
-        return messaging;
-    }
 
     public <APP, RESP> void webSocketRoute(final String path, final APP applicationState, final WebSocketRoutes<APP, RESP> route) {
         webSocketRoute(path, applicationState, route, new WebSocketRouteConfigBuilder().build());

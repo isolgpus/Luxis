@@ -23,6 +23,7 @@ import io.vertx.core.Vertx;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -79,11 +80,12 @@ public class TestLuxis<APP> implements Luxis<APP> {
         config.corsConfig().ifPresent(router::configureCors);
         router.setMaxBodySize(config.maxBodySize());
 
-        final RoutesRegister routesRegister = new RoutesRegister(router, executionDispatcher, pendingAsyncResponses, databaseClient, messaging);
+        final LinkedHashMap<String, RoutesRegister.EventRouteEntry> eventRoutes = new LinkedHashMap<>();
+        final RoutesRegister routesRegister = new RoutesRegister(router, executionDispatcher, pendingAsyncResponses, databaseClient, messaging, eventRoutes);
         final APP applicationState = builder.getRoutes().registerRoutes(routesRegister);
 
         final EventConsumerHandler eventHandler = eventConsumer == null ? null : new EventConsumerHandler(
-                eventConsumer, routesRegister.getEventRoutes(), handler,
+                eventConsumer, eventRoutes, handler,
                 executionDispatcher, pendingAsyncResponses, databaseClient, messaging);
         if (eventHandler != null) {
             eventHandler.start();

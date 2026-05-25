@@ -7,6 +7,7 @@ import io.kiw.luxis.web.messaging.EventConsumer;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 
+import java.util.LinkedHashMap;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.function.Consumer;
@@ -37,11 +38,12 @@ public final class VertxRoutesRegistrar {
         maxBodySize.ifPresent(handler::setBodyLimit);
         router.route().handler(handler);
 
-        final RoutesRegister routesRegister = new RoutesRegister(routerWrapper, executionDispatcher, pendingAsyncResponses, databaseClient, resolved);
+        final LinkedHashMap<String, RoutesRegister.EventRouteEntry> eventRoutes = new LinkedHashMap<>();
+        final RoutesRegister routesRegister = new RoutesRegister(routerWrapper, executionDispatcher, pendingAsyncResponses, databaseClient, resolved, eventRoutes);
         final R applicationState = routesRegisterConsumer.registerRoutes(routesRegister);
 
         final EventConsumerHandler eventHandler = eventConsumer == null ? null : new EventConsumerHandler(
-                eventConsumer, routesRegister.getEventRoutes(), exceptionHandler,
+                eventConsumer, eventRoutes, exceptionHandler,
                 executionDispatcher, pendingAsyncResponses, databaseClient, resolved);
         return new Registration<>(applicationState, eventHandler);
     }

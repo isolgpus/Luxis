@@ -31,17 +31,6 @@ public class LuxisStream<IN, APP, RESP, ERR, SESSION> {
     protected final DatabaseClient<?, ?, ?> databaseClient;
     protected final MessagingComponents messaging;
 
-    public LuxisStream(final List<MapInstruction> instructionChain, final APP applicationState, final PendingAsyncResponses pendingAsyncResponses, final ErrorMessageResponseMapper<ERR> errorMessageResponseMapper) {
-        this(instructionChain, applicationState, pendingAsyncResponses, errorMessageResponseMapper, null, null, MessagingComponents.NONE);
-    }
-
-    public LuxisStream(final List<MapInstruction> instructionChain, final APP applicationState, final PendingAsyncResponses pendingAsyncResponses, final ErrorMessageResponseMapper<ERR> errorMessageResponseMapper, final Ender ender) {
-        this(instructionChain, applicationState, pendingAsyncResponses, errorMessageResponseMapper, ender, null, MessagingComponents.NONE);
-    }
-
-    public LuxisStream(final List<MapInstruction> instructionChain, final APP applicationState, final PendingAsyncResponses pendingAsyncResponses, final ErrorMessageResponseMapper<ERR> errorMessageResponseMapper, final Ender ender, final DatabaseClient<?, ?, ?> databaseClient) {
-        this(instructionChain, applicationState, pendingAsyncResponses, errorMessageResponseMapper, ender, databaseClient, MessagingComponents.NONE);
-    }
 
     public LuxisStream(final List<MapInstruction> instructionChain, final APP applicationState, final PendingAsyncResponses pendingAsyncResponses, final ErrorMessageResponseMapper<ERR> errorMessageResponseMapper, final Ender ender, final DatabaseClient<?, ?, ?> databaseClient, final MessagingComponents messaging) {
         this.instructionChain = instructionChain;

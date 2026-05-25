@@ -3,6 +3,8 @@ package io.kiw.luxis.web.application.routes;
 import io.kiw.luxis.web.http.Method;
 import io.kiw.luxis.web.http.client.LuxisHttpClient;
 import io.kiw.luxis.web.test.StubRequest;
+import io.kiw.luxis.web.test.TestApplicationClientCreator;
+import io.kiw.luxis.web.test.TestClientAndServer;
 import io.kiw.luxis.web.test.TestHttpResponse;
 import io.kiw.luxis.web.test.handler.ChainForwardGetHandler;
 import io.kiw.luxis.web.test.handler.HttpClientCallHandler;
@@ -19,8 +21,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
+import io.kiw.luxis.web.test.TestMode;
+import static io.kiw.luxis.web.test.internal.RealModeAssumption.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
 import io.kiw.luxis.web.Luxis;
 import io.kiw.luxis.web.WebServiceConfigBuilder;
@@ -38,17 +40,17 @@ public class ChainingServerTest {
         return TestApplicationClientCreator.modes();
     }
 
-    private final String mode;
+    private final TestMode mode;
     private final TestApplicationClientCreator creator = new TestApplicationClientCreator();
     private List<TestClientAndServer> serverChain = List.of();
 
-    public ChainingServerTest(String mode) {
+    public ChainingServerTest(TestMode mode) {
         this.mode = mode;
     }
 
     @Before
     public void assumeMode() {
-        if (REAL_MODE.equals(mode)) {
+        if (mode == TestMode.REAL) {
             assumeRealModeEnabled();
         }
     }

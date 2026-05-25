@@ -10,7 +10,9 @@ import io.kiw.luxis.web.test.InMemoryOutboxStore;
 import io.kiw.luxis.web.test.InMemoryPublisher;
 import io.kiw.luxis.web.test.MyApplicationState;
 import io.kiw.luxis.web.test.StubRequest;
+import io.kiw.luxis.web.test.TestApplicationClientCreator;
 import io.kiw.luxis.web.test.TestClient;
+import io.kiw.luxis.web.test.TestClientAndServer;
 import io.kiw.luxis.web.test.TestHttpResponse;
 import io.kiw.luxis.web.test.handler.EchoRequest;
 import io.kiw.luxis.web.test.handler.EchoResponse;
@@ -27,8 +29,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
+import io.kiw.luxis.web.test.TestMode;
+import static io.kiw.luxis.web.test.internal.RealModeAssumption.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
 import io.kiw.luxis.web.Luxis;
 
@@ -40,17 +42,17 @@ public class HttpTransactionalMessagingTest {
         return TestApplicationClientCreator.modes();
     }
 
-    private final String mode;
+    private final TestMode mode;
     private final TestApplicationClientCreator creator = new TestApplicationClientCreator();
     private TestClientAndServer testClientAndServer;
 
-    public HttpTransactionalMessagingTest(final String mode) {
+    public HttpTransactionalMessagingTest(final TestMode mode) {
         this.mode = mode;
     }
 
     @Before
     public void setUp() {
-        if (REAL_MODE.equals(mode)) {
+        if (mode == TestMode.REAL) {
             assumeRealModeEnabled();
         }
     }

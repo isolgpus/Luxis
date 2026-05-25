@@ -1,7 +1,6 @@
-package io.kiw.luxis.web.application.routes;
+package io.kiw.luxis.web.test;
 
 import io.kiw.luxis.web.Luxis;
-import io.kiw.luxis.web.test.TestClient;
 
 public record TestClientAndServer(TestClient client, Luxis<?> luxis) implements AutoCloseable {
 

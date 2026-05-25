@@ -1,5 +1,7 @@
 package io.kiw.luxis.web.application.routes;
 
+import io.kiw.luxis.web.test.TestApplicationClientCreator;
+import io.kiw.luxis.web.test.TestClientAndServer;
 import io.kiw.luxis.web.test.TestLuxis;
 import io.kiw.luxis.web.WebSocketRouteConfigBuilder;
 import io.kiw.luxis.web.pipeline.DisconnectSession;
@@ -33,9 +35,8 @@ import org.junit.runners.Parameterized;
 import java.util.Collection;
 
 import static io.kiw.luxis.web.application.routes.Eventually.eventually;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.REAL_MODE;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.STUB_MODE;
-import static io.kiw.luxis.web.application.routes.TestApplicationClientCreator.assumeRealModeEnabled;
+import io.kiw.luxis.web.test.TestMode;
+import static io.kiw.luxis.web.test.internal.RealModeAssumption.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
 import static org.junit.Assert.fail;
 import io.kiw.luxis.web.Luxis;
@@ -49,18 +50,18 @@ public class WebSocketTest {
         return TestApplicationClientCreator.modes();
     }
 
-    private final String mode;
+    private final TestMode mode;
     private final TestApplicationClientCreator creator = new TestApplicationClientCreator();
     private TestWebSocketClient ws;
     private TestClientAndServer testClientAndServer;
 
-    public WebSocketTest(String mode) {
+    public WebSocketTest(TestMode mode) {
         this.mode = mode;
     }
 
     @Before
     public void setUp() {
-        if (REAL_MODE.equals(mode)) {
+        if (mode == TestMode.REAL) {
             assumeRealModeEnabled();
         }
     }
@@ -733,7 +734,7 @@ public class WebSocketTest {
             return state;
         }));
 
-        if (STUB_MODE.equals(mode)) {
+        if (mode == TestMode.STUB) {
             handler.setOnRegistered(() -> ((TestLuxis<?>) testClientAndServer.luxis()).advanceTimeBy(1_001));
         }
 

@@ -20,8 +20,8 @@ public final class TestHelper {
         return fileContents;
     }
 
-    public static void awaitTrue(final String mode, final BooleanSupplier condition, final String message) {
-        if ("stub".equals(mode)) {
+    public static void awaitTrue(final TestMode mode, final BooleanSupplier condition, final String message) {
+        if (mode == TestMode.STUB) {
             if (!condition.getAsBoolean()) {
                 throw new AssertionError(message);
             }

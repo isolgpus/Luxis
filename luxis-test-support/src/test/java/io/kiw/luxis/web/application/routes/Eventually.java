@@ -1,5 +1,7 @@
 package io.kiw.luxis.web.application.routes;
 
+import io.kiw.luxis.web.test.TestMode;
+
 public final class Eventually {
 
     private static final long DEFAULT_TIMEOUT_MILLIS = 5000;
@@ -8,8 +10,8 @@ public final class Eventually {
     private Eventually() {
     }
 
-    public static void eventually(final String mode, final Runnable assertion) {
-        if (!TestApplicationClientCreator.REAL_MODE.equals(mode)) {
+    public static void eventually(final TestMode mode, final Runnable assertion) {
+        if (mode != TestMode.REAL) {
             assertion.run();
             return;
         }

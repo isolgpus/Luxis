@@ -16,10 +16,6 @@ public final class TestHelper {
         return MAPPER.createObjectNode();
     }
 
-    public static String file(final String fileContents) {
-        return fileContents;
-    }
-
     public static void awaitTrue(final TestMode mode, final BooleanSupplier condition, final String message) {
         if (mode == TestMode.STUB) {
             if (!condition.getAsBoolean()) {

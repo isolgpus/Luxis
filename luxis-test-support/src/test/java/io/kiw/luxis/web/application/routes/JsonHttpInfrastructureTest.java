@@ -1,7 +1,9 @@
 package io.kiw.luxis.web.application.routes;
 
+import io.kiw.luxis.web.Luxis;
 import io.kiw.luxis.web.http.HttpCookie;
 import io.kiw.luxis.web.http.Method;
+import io.kiw.luxis.web.test.MyApplicationState;
 import io.kiw.luxis.web.test.StubRequest;
 import io.kiw.luxis.web.test.TestApplicationClientCreator;
 import io.kiw.luxis.web.test.TestClient;
@@ -9,6 +11,7 @@ import io.kiw.luxis.web.test.TestClientAndServer;
 import io.kiw.luxis.web.test.TestFilter;
 import io.kiw.luxis.web.test.TestHelper;
 import io.kiw.luxis.web.test.TestHttpResponse;
+import io.kiw.luxis.web.test.TestMode;
 import io.kiw.luxis.web.test.handler.BlockingCompleteTestHandler;
 import io.kiw.luxis.web.test.handler.BlockingFlatMapFailHandler;
 import io.kiw.luxis.web.test.handler.BlockingRequest;
@@ -37,11 +40,8 @@ import org.junit.runners.Parameterized;
 
 import java.util.Collection;
 
-import io.kiw.luxis.web.test.TestMode;
-import static io.kiw.luxis.web.test.internal.RealModeAssumption.assumeRealModeEnabled;
 import static io.kiw.luxis.web.test.TestHelper.json;
-import io.kiw.luxis.web.Luxis;
-import io.kiw.luxis.web.test.MyApplicationState;
+import static io.kiw.luxis.web.test.internal.RealModeAssumption.assumeRealModeEnabled;
 
 @RunWith(Parameterized.class)
 public class JsonHttpInfrastructureTest {
@@ -798,7 +798,7 @@ public class JsonHttpInfrastructureTest {
         TestHttpResponse response = luxisTestClient.get(StubRequest.request("/download"));
 
         Assert.assertEquals(
-                TestHttpResponse.response(TestHelper.file("file contents"), "text/html; charset=utf-8")
+                TestHttpResponse.response("file contents", "text/html; charset=utf-8")
                         .withHeader("Transfer-Encoding", "chunked")
                         .withHeader("Content-Disposition", "data.txt"),
                 response

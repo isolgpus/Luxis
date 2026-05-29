@@ -17,7 +17,6 @@ import io.kiw.luxis.web.messaging.Publisher;
 import io.kiw.luxis.web.test.internal.StubExecutionDispatcher;
 import io.kiw.luxis.web.test.internal.StubRouter;
 import io.kiw.luxis.web.test.internal.StubTimeoutScheduler;
-import io.vertx.core.Vertx;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -32,17 +31,14 @@ public class TestLuxis<APP> implements Luxis<APP> {
     private final StubRouter router;
     private final APP applicationState;
     private final List<Exception> seenExceptions;
-    private final PendingAsyncResponses pendingAsyncResponses;
     private final StubTimeoutScheduler stubTimeoutScheduler;
     private final TimeInjector timeInjector;
     private final EventConsumerHandler eventConsumerHandler;
-    private volatile Vertx vertx;
 
-    TestLuxis(final StubRouter router, final APP applicationState, final List<Exception> seenExceptions, final PendingAsyncResponses pendingAsyncResponses, final StubTimeoutScheduler stubTimeoutScheduler, final TimeInjector timeInjector, final EventConsumerHandler eventConsumerHandler) {
+    TestLuxis(final StubRouter router, final APP applicationState, final List<Exception> seenExceptions, final StubTimeoutScheduler stubTimeoutScheduler, final TimeInjector timeInjector, final EventConsumerHandler eventConsumerHandler) {
         this.router = router;
         this.applicationState = applicationState;
         this.seenExceptions = seenExceptions;
-        this.pendingAsyncResponses = pendingAsyncResponses;
         this.stubTimeoutScheduler = stubTimeoutScheduler;
         this.timeInjector = timeInjector;
         this.eventConsumerHandler = eventConsumerHandler;
@@ -89,7 +85,7 @@ public class TestLuxis<APP> implements Luxis<APP> {
             eventHandler.start();
         }
 
-        final TestLuxis<APP> testLuxis = new TestLuxis<>(router, applicationState, seenExceptions, pendingAsyncResponses, stubTimeoutScheduler, timeInjector, eventHandler);
+        final TestLuxis<APP> testLuxis = new TestLuxis<>(router, applicationState, seenExceptions, stubTimeoutScheduler, timeInjector, eventHandler);
         if (network != null) {
             network.register(config.host(), config.port(), testLuxis);
         }
@@ -130,21 +126,9 @@ public class TestLuxis<APP> implements Luxis<APP> {
     }
 
     @Override
-    public synchronized Vertx getVertx() {
-        if (vertx == null) {
-            vertx = Vertx.vertx();
-        }
-        return vertx;
-    }
-
-    @Override
     public synchronized void close() {
         if (eventConsumerHandler != null) {
             eventConsumerHandler.close();
-        }
-        if (vertx != null) {
-            vertx.close().toCompletionStage().toCompletableFuture().join();
-            vertx = null;
         }
     }
 

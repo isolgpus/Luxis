@@ -47,7 +47,7 @@ public class TestApplicationClientCreator {
     public <T> TestClientAndServer createTestServerAndClient(final TestMode mode, final LuxisBuilder<T> builder) {
         final WebServerConfig config = builder.getConfig();
         if (mode == TestMode.REAL) {
-            final Luxis<T> luxis = builder.start();
+            final Luxis<T> luxis = builder.start(Vertx.vertx());
             return new TestClientAndServer(new VertxTestClient("127.0.0.1", config.port()), luxis);
         }
         final Luxis<T> luxis = TestLuxis.from(builder, network);

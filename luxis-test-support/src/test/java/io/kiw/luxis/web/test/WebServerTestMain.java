@@ -2,6 +2,7 @@ package io.kiw.luxis.web.test;
 
 import io.kiw.luxis.web.Luxis;
 import io.kiw.luxis.web.WebServiceConfigBuilder;
+import io.vertx.core.Vertx;
 
 public final class WebServerTestMain {
     private WebServerTestMain() {
@@ -17,7 +18,7 @@ public final class WebServerTestMain {
                         .setExceptionHandler(Throwable::printStackTrace)
                         .setMaxBodySize(1_048_576)
                         .build())
-                .start();
+                .start(Vertx.vertx());
 
         luxis.apply(82876, (event, myApplicationState) -> myApplicationState.setLongValue(event));
     }

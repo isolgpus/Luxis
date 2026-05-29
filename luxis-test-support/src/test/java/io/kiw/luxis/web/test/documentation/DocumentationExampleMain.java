@@ -2,6 +2,7 @@ package io.kiw.luxis.web.test.documentation;
 
 import io.kiw.luxis.web.Luxis;
 import io.kiw.luxis.web.http.Method;
+import io.vertx.core.Vertx;
 
 public final class DocumentationExampleMain {
     private DocumentationExampleMain() {
@@ -15,7 +16,7 @@ public final class DocumentationExampleMain {
 
                     routesRegister.jsonRoute("/hello/world", Method.POST, appState, HelloWorldRequest.class, new HelloWorldHandler());
                     return appState;
-                }).start();
+                }).start(Vertx.vertx());
 
     }
 }

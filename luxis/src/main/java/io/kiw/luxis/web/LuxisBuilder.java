@@ -43,13 +43,12 @@ public final class LuxisBuilder<APP> {
         return this;
     }
 
-    public Luxis<APP> start() {
+    public Luxis<APP> start(final Vertx vertx) {
         final WebServerConfig config = configOrDefault();
         final Publisher publisher = eventPlatform == null ? null : eventPlatform.publisher();
         final OutboxStore<?> outboxStore = eventPlatform == null ? null : eventPlatform.outboxStore();
         final EventConsumer eventConsumer = eventPlatform == null ? null : eventPlatform.eventConsumer();
 
-        final Vertx vertx = Vertx.vertx();
         final HttpServer httpServer = vertx.createHttpServer();
         final Router router = Router.router(vertx);
 
@@ -74,7 +73,7 @@ public final class LuxisBuilder<APP> {
         }
 
         httpServer.requestHandler(router).listen(config.port).toCompletionStage().toCompletableFuture().join();
-        return new VertxLuxis<>(vertx, executionDispatcher, applicationState, () -> {
+        return new VertxLuxis<>(executionDispatcher, applicationState, () -> {
             if (eventHandler != null) {
                 eventHandler.close();
             }

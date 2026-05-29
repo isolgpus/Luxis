@@ -1,7 +1,5 @@
 package io.kiw.luxis.web;
 
-import io.vertx.core.Vertx;
-
 import java.util.function.BiConsumer;
 
 public interface Luxis<APP> extends AutoCloseable {
@@ -11,7 +9,5 @@ public interface Luxis<APP> extends AutoCloseable {
     }
 
     <IN> void apply(final IN immutableState, final BiConsumer<IN, APP> applicationStateConsumer);
-
-    Vertx getVertx();
 
 }

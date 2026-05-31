@@ -40,13 +40,13 @@ public final class VertxLuxisHttpClient implements LuxisHttpClient {
     }
 
     public VertxLuxisHttpClient(final Vertx vertx, final LuxisHttpClientConfig config) {
+        this(vertx, config, new HttpClientOptions());
+    }
+
+    public VertxLuxisHttpClient(final Vertx vertx, final LuxisHttpClientConfig config, final HttpClientOptions httpClientOptions) {
         this.vertx = vertx;
         this.config = config;
-        if (config.isSsl()) {
-            this.httpClient = vertx.createHttpClient(new HttpClientOptions().setSsl(true));
-        } else {
-            this.httpClient = vertx.createHttpClient();
-        }
+        this.httpClient = vertx.createHttpClient(httpClientOptions);
         this.webSocketClient = vertx.createWebSocketClient();
     }
 

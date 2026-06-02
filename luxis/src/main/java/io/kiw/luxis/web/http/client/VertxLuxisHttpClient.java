@@ -89,26 +89,30 @@ public final class VertxLuxisHttpClient implements LuxisHttpClient {
 
         httpClient.request(HttpMethod.POST, port, host, requestUri)
                 .onSuccess(req -> {
-                    for (final Map.Entry<String, String> header : request.getHeaders().entrySet()) {
-                        req.putHeader(header.getKey(), header.getValue());
+                    try {
+                        for (final Map.Entry<String, String> header : request.getHeaders().entrySet()) {
+                            req.putHeader(header.getKey(), header.getValue());
+                        }
+
+                        final String boundary = "----LuxisHttpClientBoundary" + System.nanoTime();
+                        req.putHeader("Content-Type", "multipart/form-data; boundary=" + boundary);
+
+                        final Buffer multipartBody = Buffer.buffer();
+                        for (final Map.Entry<String, HttpBuffer> upload : request.getFileUploads().entrySet()) {
+                            multipartBody.appendString("--" + boundary + "\r\n");
+                            multipartBody.appendString("Content-Disposition: form-data; name=\"" + upload.getKey() + "\"; filename=\"" + upload.getKey() + "\"\r\n");
+                            multipartBody.appendString("Content-Type: application/octet-stream\r\n\r\n");
+                            multipartBody.appendBuffer(Buffer.buffer(upload.getValue().bytes()));
+                            multipartBody.appendString("\r\n");
+                        }
+                        multipartBody.appendString("--" + boundary + "--\r\n");
+
+                        req.send(multipartBody)
+                                .onSuccess(resp -> handleResponse(resp, future, responseType))
+                                .onFailure(future::completeExceptionally);
+                    } catch (final Exception t) {
+                        future.completeExceptionally(t);
                     }
-
-                    final String boundary = "----LuxisHttpClientBoundary" + System.nanoTime();
-                    req.putHeader("Content-Type", "multipart/form-data; boundary=" + boundary);
-
-                    final Buffer multipartBody = Buffer.buffer();
-                    for (final Map.Entry<String, HttpBuffer> upload : request.getFileUploads().entrySet()) {
-                        multipartBody.appendString("--" + boundary + "\r\n");
-                        multipartBody.appendString("Content-Disposition: form-data; name=\"" + upload.getKey() + "\"; filename=\"" + upload.getKey() + "\"\r\n");
-                        multipartBody.appendString("Content-Type: application/octet-stream\r\n\r\n");
-                        multipartBody.appendBuffer(Buffer.buffer(upload.getValue().bytes()));
-                        multipartBody.appendString("\r\n");
-                    }
-                    multipartBody.appendString("--" + boundary + "--\r\n");
-
-                    req.send(multipartBody)
-                            .onSuccess(resp -> handleResponse(resp, future, responseType))
-                            .onFailure(future::completeExceptionally);
                 })
                 .onFailure(future::completeExceptionally);
 
@@ -129,13 +133,17 @@ public final class VertxLuxisHttpClient implements LuxisHttpClient {
 
         httpClient.request(HttpMethod.GET, port, host, requestUri)
                 .onSuccess(req -> {
-                    for (final Map.Entry<String, String> header : request.getHeaders().entrySet()) {
-                        req.putHeader(header.getKey(), header.getValue());
-                    }
+                    try {
+                        for (final Map.Entry<String, String> header : request.getHeaders().entrySet()) {
+                            req.putHeader(header.getKey(), header.getValue());
+                        }
 
-                    req.send()
-                            .onSuccess(resp -> handleDownloadResponse(resp, future))
-                            .onFailure(future::completeExceptionally);
+                        req.send()
+                                .onSuccess(resp -> handleDownloadResponse(resp, future))
+                                .onFailure(future::completeExceptionally);
+                    } catch (final Exception t) {
+                        future.completeExceptionally(t);
+                    }
                 })
                 .onFailure(future::completeExceptionally);
 
@@ -146,15 +154,19 @@ public final class VertxLuxisHttpClient implements LuxisHttpClient {
                                         final CompletableFuture<Result<HttpErrorResponse, HttpClientResponse<HttpBuffer>>> future) {
         resp.body()
                 .onSuccess(body -> {
-                    final Map<String, String> headers = new LinkedHashMap<>();
-                    for (final String name : resp.headers().names()) {
-                        headers.put(name, resp.getHeader(name));
-                    }
+                    try {
+                        final Map<String, String> headers = new LinkedHashMap<>();
+                        for (final String name : resp.headers().names()) {
+                            headers.put(name, resp.getHeader(name));
+                        }
 
-                    if (config.isErrorAwareResponses() && resp.statusCode() >= 400) {
-                        future.complete(Result.error(toHttpErrorResponse(body.toString(), resp.statusCode())));
-                    } else {
-                        future.complete(Result.success(new HttpClientResponse<>(resp.statusCode(), new HttpBuffer(body.getBytes()), headers)));
+                        if (config.isErrorAwareResponses() && resp.statusCode() >= 400) {
+                            future.complete(Result.error(toHttpErrorResponse(body.toString(), resp.statusCode())));
+                        } else {
+                            future.complete(Result.success(new HttpClientResponse<>(resp.statusCode(), new HttpBuffer(body.getBytes()), headers)));
+                        }
+                    } catch (final Exception t) {
+                        future.completeExceptionally(t);
                     }
                 })
                 .onFailure(future::completeExceptionally);
@@ -173,20 +185,24 @@ public final class VertxLuxisHttpClient implements LuxisHttpClient {
 
         httpClient.request(method, port, host, requestUri)
                 .onSuccess(req -> {
-                    for (final Map.Entry<String, String> header : request.getHeaders().entrySet()) {
-                        req.putHeader(header.getKey(), header.getValue());
-                    }
+                    try {
+                        for (final Map.Entry<String, String> header : request.getHeaders().entrySet()) {
+                            req.putHeader(header.getKey(), header.getValue());
+                        }
 
-                    if (request.getBody() != null) {
-                        req.putHeader("Content-Type", "application/json");
+                        if (request.getBody() != null) {
+                            req.putHeader("Content-Type", "application/json");
 
-                        req.send(Buffer.buffer(request.getBody() instanceof String ? (String) request.getBody() : mapper.writeValueAsString(request.getBody())))
-                                .onSuccess(resp -> handleResponse(resp, future, responseType))
-                                .onFailure(future::completeExceptionally);
-                    } else {
-                        req.send()
-                                .onSuccess(resp -> handleResponse(resp, future, responseType))
-                                .onFailure(future::completeExceptionally);
+                            req.send(Buffer.buffer(request.getBody() instanceof String ? (String) request.getBody() : mapper.writeValueAsString(request.getBody())))
+                                    .onSuccess(resp -> handleResponse(resp, future, responseType))
+                                    .onFailure(future::completeExceptionally);
+                        } else {
+                            req.send()
+                                    .onSuccess(resp -> handleResponse(resp, future, responseType))
+                                    .onFailure(future::completeExceptionally);
+                        }
+                    } catch (final Exception t) {
+                        future.completeExceptionally(t);
                     }
                 })
                 .onFailure(future::completeExceptionally);
@@ -250,22 +266,26 @@ public final class VertxLuxisHttpClient implements LuxisHttpClient {
                                     final Class<T> responseType) {
         resp.body()
                 .onSuccess(body -> {
-                    final String rawBody = body.toString();
-                    final Map<String, String> headers = new LinkedHashMap<>();
-                    for (final String name : resp.headers().names()) {
-                        headers.put(name, resp.getHeader(name));
-                    }
-
-                    if (config.isErrorAwareResponses() && resp.statusCode() >= 400) {
-                        future.complete(Result.error(toHttpErrorResponse(rawBody, resp.statusCode())));
-                    } else {
-                        final T typedBody;
-                        if (responseType == String.class) {
-                            typedBody = (T) rawBody;
-                        } else {
-                            typedBody = mapper.readValue(rawBody, responseType);
+                    try {
+                        final String rawBody = body.toString();
+                        final Map<String, String> headers = new LinkedHashMap<>();
+                        for (final String name : resp.headers().names()) {
+                            headers.put(name, resp.getHeader(name));
                         }
-                        future.complete(Result.success(new HttpClientResponse<>(resp.statusCode(), typedBody, headers)));
+
+                        if (config.isErrorAwareResponses() && resp.statusCode() >= 400) {
+                            future.complete(Result.error(toHttpErrorResponse(rawBody, resp.statusCode())));
+                        } else {
+                            final T typedBody;
+                            if (responseType == String.class) {
+                                typedBody = (T) rawBody;
+                            } else {
+                                typedBody = mapper.readValue(rawBody, responseType);
+                            }
+                            future.complete(Result.success(new HttpClientResponse<>(resp.statusCode(), typedBody, headers)));
+                        }
+                    } catch (final Exception t) {
+                        future.completeExceptionally(t);
                     }
                 })
                 .onFailure(future::completeExceptionally);

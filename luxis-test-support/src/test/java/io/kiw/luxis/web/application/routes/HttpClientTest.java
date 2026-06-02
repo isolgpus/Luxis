@@ -29,6 +29,7 @@ import io.kiw.luxis.web.test.handler.SimpleGetHandler;
 import io.kiw.luxis.web.test.handler.SimpleMultiplyHandler;
 import io.kiw.luxis.web.test.handler.SimplePostValueHandler;
 import io.kiw.luxis.web.test.handler.SimpleValueRequest;
+import io.kiw.luxis.web.test.handler.SimpleValueResponse;
 import io.kiw.luxis.web.test.handler.SimpleWebsocketRequest;
 import io.kiw.luxis.web.test.handler.WebSocketEchoRequest;
 import io.kiw.luxis.web.test.handler.WebSocketEchoResponse;
@@ -811,6 +812,37 @@ public class HttpClientTest {
                     Assert.assertEquals("data.txt", success.headers().get("Content-Disposition"));
                     Assert.assertEquals("text/html; charset=utf-8", success.headers().get("Content-Type"));
                 });
+    }
+
+    @Test
+    public void shouldNotHangWhenServerReturnsUndeserialisableBody() throws Exception {
+        // REAL-mode only: the stub client deserialises synchronously, so this defect — a
+        // deserialisation failure inside the Vert.x response callback leaving the response
+        // future uncompleted — can only manifest against the real HTTP client.
+        org.junit.Assume.assumeTrue(mode == TestMode.REAL);
+
+        serverB = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/api/value", Method.GET, state, Void.class, new SimpleGetHandler(42));
+            return state;
+        }).withConfig(new WebServiceConfigBuilder().setPort(SERVER_B_PORT).build()));
+
+        // errorAwareResponses is intentionally NOT enabled, so the client does not short-circuit
+        // on the >= 400 status and instead tries to deserialise the framework's non-JSON 404 body.
+        final LuxisHttpClientConfig config = LuxisHttpClientConfig.defaults().baseUrl(SERVER_B_BASE_URL);
+        final LuxisHttpClient client = creator.createHttpClient(mode, config);
+
+        final java.util.concurrent.CompletableFuture<Result<HttpErrorResponse, HttpClientResponse<SimpleValueResponse>>> future =
+                client.get(HttpClientRequest.request("/does-not-exist"), SimpleValueResponse.class).toCompletableFuture();
+
+        try {
+            future.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            Assert.fail("Expected deserialisation of the non-JSON 404 body to fail");
+        } catch (final java.util.concurrent.ExecutionException expected) {
+            // Future completed exceptionally — the client surfaced the failure instead of hanging.
+        } catch (final java.util.concurrent.TimeoutException hung) {
+            Assert.fail("Client hung: the response future was never completed when the body failed to deserialise");
+        }
     }
 
     private class ClientState {

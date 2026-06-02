@@ -5,6 +5,7 @@ import io.kiw.luxis.web.cors.CorsConfig;
 import io.kiw.luxis.web.db.DatabaseClient;
 import io.kiw.luxis.web.http.Method;
 import io.kiw.luxis.web.internal.HttpWebSocketRouteHandler;
+import io.kiw.luxis.web.internal.LoopExecutor;
 import io.kiw.luxis.web.internal.LuxisPipeline;
 import io.kiw.luxis.web.internal.MapInstruction;
 import io.kiw.luxis.web.internal.MessagingComponents;
@@ -31,15 +32,15 @@ public class StubRouter extends RouterWrapper {
     private final List<WebSocketRouteEntry> webSocketRoutes = new ArrayList<>();
 
     public StubRouter(final Consumer<Exception> exceptionHandler, final PendingAsyncResponses pendingAsyncResponses, final TransactionExecutor transactionExecutor) {
-        this(exceptionHandler, pendingAsyncResponses, transactionExecutor, null, MessagingComponents.NONE);
+        this(exceptionHandler, pendingAsyncResponses, transactionExecutor, null, null, MessagingComponents.NONE);
     }
 
     public StubRouter(final Consumer<Exception> exceptionHandler, final PendingAsyncResponses pendingAsyncResponses, final TransactionExecutor transactionExecutor, final DatabaseClient<?, ?, ?> databaseClient) {
-        this(exceptionHandler, pendingAsyncResponses, transactionExecutor, databaseClient, MessagingComponents.NONE);
+        this(exceptionHandler, pendingAsyncResponses, transactionExecutor, null, databaseClient, MessagingComponents.NONE);
     }
 
-    public StubRouter(final Consumer<Exception> exceptionHandler, final PendingAsyncResponses pendingAsyncResponses, final TransactionExecutor transactionExecutor, final DatabaseClient<?, ?, ?> databaseClient, final MessagingComponents messaging) {
-        super(exceptionHandler, pendingAsyncResponses, transactionExecutor, databaseClient, messaging);
+    public StubRouter(final Consumer<Exception> exceptionHandler, final PendingAsyncResponses pendingAsyncResponses, final TransactionExecutor transactionExecutor, final LoopExecutor loopExecutor, final DatabaseClient<?, ?, ?> databaseClient, final MessagingComponents messaging) {
+        super(exceptionHandler, pendingAsyncResponses, transactionExecutor, loopExecutor, databaseClient, messaging);
     }
 
     public void setMaxBodySize(final OptionalLong maxBodySize) {
@@ -100,6 +101,8 @@ public class StubRouter extends RouterWrapper {
 
                 if (applicationInstruction.isTransactional) {
                     this.handleTransactional(applicationInstruction, context, flow.getApplicationState(), flow.getEnder());
+                } else if (applicationInstruction.isLoop) {
+                    this.handleLoop(applicationInstruction, context, flow.getApplicationState(), flow.getEnder());
                 } else if (applicationInstruction.isAsync) {
                     final CompletableFuture completableFuture = this.handleAsync(applicationInstruction, context, flow.getApplicationState(), flow.getEnder());
                     if (completableFuture != null) {

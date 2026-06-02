@@ -30,7 +30,8 @@ public final class VertxRoutesRegistrar {
                                                          final EventConsumer eventConsumer) {
         final MessagingComponents resolved = messaging != null ? messaging : MessagingComponents.NONE;
         final TransactionExecutor transactionExecutor = databaseClient == null ? null : new TransactionExecutor(databaseClient, executionDispatcher, resolved);
-        final VertxRouterWrapperImpl routerWrapper = new VertxRouterWrapperImpl(router, defaultTimeoutMillis, exceptionHandler, pendingAsyncResponses, transactionExecutor, databaseClient, resolved);
+        final LoopExecutor loopExecutor = new LoopExecutor(executionDispatcher, pendingAsyncResponses, databaseClient, resolved);
+        final VertxRouterWrapperImpl routerWrapper = new VertxRouterWrapperImpl(router, defaultTimeoutMillis, exceptionHandler, pendingAsyncResponses, transactionExecutor, loopExecutor, databaseClient, resolved);
         corsConfig.ifPresent(routerWrapper::configureCors);
 
         final BodyHandler handler = BodyHandler.create()

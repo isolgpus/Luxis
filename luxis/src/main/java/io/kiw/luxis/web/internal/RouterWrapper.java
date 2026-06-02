@@ -20,21 +20,23 @@ public abstract class RouterWrapper {
     private final Consumer<Exception> exceptionHandler;
     private final PendingAsyncResponses pendingAsyncResponses;
     private final TransactionExecutor transactionExecutor;
+    private final LoopExecutor loopExecutor;
     private final DatabaseClient<?, ?, ?> databaseClient;
     private final MessagingComponents messaging;
 
     public RouterWrapper(final Consumer<Exception> exceptionHandler, final PendingAsyncResponses pendingAsyncResponses, final TransactionExecutor transactionExecutor) {
-        this(exceptionHandler, pendingAsyncResponses, transactionExecutor, null, MessagingComponents.NONE);
+        this(exceptionHandler, pendingAsyncResponses, transactionExecutor, null, null, MessagingComponents.NONE);
     }
 
     public RouterWrapper(final Consumer<Exception> exceptionHandler, final PendingAsyncResponses pendingAsyncResponses, final TransactionExecutor transactionExecutor, final DatabaseClient<?, ?, ?> databaseClient) {
-        this(exceptionHandler, pendingAsyncResponses, transactionExecutor, databaseClient, MessagingComponents.NONE);
+        this(exceptionHandler, pendingAsyncResponses, transactionExecutor, null, databaseClient, MessagingComponents.NONE);
     }
 
-    public RouterWrapper(final Consumer<Exception> exceptionHandler, final PendingAsyncResponses pendingAsyncResponses, final TransactionExecutor transactionExecutor, final DatabaseClient<?, ?, ?> databaseClient, final MessagingComponents messaging) {
+    public RouterWrapper(final Consumer<Exception> exceptionHandler, final PendingAsyncResponses pendingAsyncResponses, final TransactionExecutor transactionExecutor, final LoopExecutor loopExecutor, final DatabaseClient<?, ?, ?> databaseClient, final MessagingComponents messaging) {
         this.exceptionHandler = exceptionHandler;
         this.pendingAsyncResponses = pendingAsyncResponses;
         this.transactionExecutor = transactionExecutor;
+        this.loopExecutor = loopExecutor;
         this.databaseClient = databaseClient;
         this.messaging = messaging != null ? messaging : MessagingComponents.NONE;
     }
@@ -107,6 +109,27 @@ public abstract class RouterWrapper {
 
             @Override
             public void onSubChainError(final Object errValue) {
+                processResult(Result.error((HttpErrorResponse) errValue), applicationInstruction, requestContext, ender);
+            }
+        });
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public void handleLoop(final MapInstruction applicationInstruction, final RequestContext requestContext, final Object applicationState, final Ender ender) {
+        if (loopExecutor == null) {
+            handleException(requestContext, new IllegalStateException("Encountered loop instruction but no LoopExecutor is registered."));
+            return;
+        }
+        final HttpSession httpSession = new HttpSession(requestContext);
+        final Consumer<Exception> wrappedExceptionHandler = e -> handleException(requestContext, e);
+        loopExecutor.execute(httpSession, applicationState, applicationInstruction, requestContext.get("state"), wrappedExceptionHandler, new LoopExecutor.Callbacks() {
+            @Override
+            public void onSuccess(final Object finalValue) {
+                processResult(Result.success(finalValue), applicationInstruction, requestContext, ender);
+            }
+
+            @Override
+            public void onError(final Object errValue) {
                 processResult(Result.error((HttpErrorResponse) errValue), applicationInstruction, requestContext, ender);
             }
         });

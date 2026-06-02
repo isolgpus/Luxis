@@ -14,6 +14,7 @@ public final class MapInstruction<IN, OUT, APP, SESSION, ERR> {
     public final boolean isAsync;
     public final boolean lastStep;
     public final boolean isTransactional;
+    public final boolean isLoop;
 
     private final StreamFlatMapper<RouteContext<IN, APP, SESSION>, ERR, OUT> consumer;
     @SuppressWarnings("rawtypes")
@@ -22,6 +23,7 @@ public final class MapInstruction<IN, OUT, APP, SESSION, ERR> {
     @SuppressWarnings("rawtypes")
     private final StreamAsyncFlatMapper asyncBlockingConsumer;
     private final TransactionSubChain<APP, ERR, SESSION> transactionSubChain;
+    private final LoopSubChain loopSubChain;
 
     private final BiFunction<IN, SESSION, ?> blockingContextFactory;
     private final BlockingAsyncContextFactory<IN, SESSION, ?> blockingAsyncContextFactory;
@@ -40,7 +42,8 @@ public final class MapInstruction<IN, OUT, APP, SESSION, ERR> {
             final boolean lastStep,
             final BiFunction<IN, SESSION, ?> blockingContextFactory,
             final BlockingAsyncContextFactory<IN, SESSION, ?> blockingAsyncContextFactory,
-            final TransactionSubChain<APP, ERR, SESSION> transactionSubChain) {
+            final TransactionSubChain<APP, ERR, SESSION> transactionSubChain,
+            final LoopSubChain loopSubChain) {
         this.isBlocking = isBlocking;
         this.isAsync = isAsync;
         this.consumer = consumer;
@@ -52,41 +55,53 @@ public final class MapInstruction<IN, OUT, APP, SESSION, ERR> {
         this.blockingAsyncContextFactory = blockingAsyncContextFactory;
         this.transactionSubChain = transactionSubChain;
         this.isTransactional = transactionSubChain != null;
+        this.loopSubChain = loopSubChain;
+        this.isLoop = loopSubChain != null;
     }
 
     public static <IN, OUT, APP, SESSION, ERR> MapInstruction<IN, OUT, APP, SESSION, ERR> nonBlocking(
             final StreamFlatMapper<RouteContext<IN, APP, SESSION>, ERR, OUT> consumer, final boolean lastStep) {
-        return new MapInstruction<>(false, false, consumer, null, null, null, lastStep, null, null, null);
+        return new MapInstruction<>(false, false, consumer, null, null, null, lastStep, null, null, null, null);
     }
 
     public static <IN, OUT, APP, SESSION, ERR> MapInstruction<IN, OUT, APP, SESSION, ERR> blocking(
             final StreamFlatMapper<?, ERR, OUT> consumer,
             final BiFunction<IN, SESSION, ?> contextFactory,
             final boolean lastStep) {
-        return new MapInstruction<>(true, false, null, consumer, null, null, lastStep, contextFactory, null, null);
+        return new MapInstruction<>(true, false, null, consumer, null, null, lastStep, contextFactory, null, null, null);
     }
 
     public static <IN, OUT, APP, SESSION, ERR> MapInstruction<IN, OUT, APP, SESSION, ERR> nonBlockingAsync(
             final StreamAsyncFlatMapper<AsyncRouteContext<IN, APP, SESSION, ERR>, ERR, OUT> asyncConsumer,
             final boolean lastStep) {
-        return new MapInstruction<>(false, true, null, null, asyncConsumer, null, lastStep, null, null, null);
+        return new MapInstruction<>(false, true, null, null, asyncConsumer, null, lastStep, null, null, null, null);
     }
 
     public static <IN, OUT, APP, SESSION, ERR> MapInstruction<IN, OUT, APP, SESSION, ERR> blockingAsync(
             final StreamAsyncFlatMapper<?, ERR, OUT> asyncBlockingConsumer,
             final BlockingAsyncContextFactory<IN, SESSION, ?> contextFactory,
             final boolean lastStep) {
-        return new MapInstruction<>(true, true, null, null, null, asyncBlockingConsumer, lastStep, null, contextFactory, null);
+        return new MapInstruction<>(true, true, null, null, null, asyncBlockingConsumer, lastStep, null, contextFactory, null, null);
     }
 
     public static <IN, OUT, APP, SESSION, ERR> MapInstruction<IN, OUT, APP, SESSION, ERR> transactional(
             final TransactionSubChain<APP, ERR, SESSION> subChain,
             final boolean lastStep) {
-        return new MapInstruction<>(false, true, null, null, null, null, lastStep, null, null, subChain);
+        return new MapInstruction<>(false, true, null, null, null, null, lastStep, null, null, subChain, null);
+    }
+
+    public static <IN, OUT, APP, SESSION, ERR> MapInstruction<IN, OUT, APP, SESSION, ERR> loop(
+            final LoopSubChain subChain,
+            final boolean lastStep) {
+        return new MapInstruction<>(false, false, null, null, null, null, lastStep, null, null, null, subChain);
     }
 
     public TransactionSubChain<APP, ERR, SESSION> transactionSubChain() {
         return transactionSubChain;
+    }
+
+    public LoopSubChain loopSubChain() {
+        return loopSubChain;
     }
 
     public void markAsValidation() {

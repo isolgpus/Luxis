@@ -10,17 +10,17 @@ import io.kiw.luxis.web.internal.MapInstruction;
 import io.kiw.luxis.web.internal.MessagingComponents;
 import io.kiw.luxis.web.internal.PendingAsyncResponses;
 import io.kiw.luxis.web.internal.RestrictedBlockingAsyncRouteContext;
+import io.kiw.luxis.web.internal.LoopSubChain;
 import io.kiw.luxis.web.internal.RestrictedBlockingRouteContext;
 import io.kiw.luxis.web.internal.RouteContext;
 import io.kiw.luxis.web.internal.ScheduleType;
-import io.kiw.luxis.web.internal.TimeoutScheduler;
 import io.kiw.luxis.web.internal.ender.Ender;
 import io.kiw.luxis.web.validation.Validator;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -212,101 +212,44 @@ public class LuxisStream<IN, APP, RESP, ERR, SESSION> {
     /**
      * Runs a bounded feedback loop as a single forward-typed pipeline step.
      *
-     * <p>The loop iterates over the current stream value of type {@code IN}. Each iteration runs the
-     * async {@code body}, which returns a {@link LoopStep}: {@link LoopStep#again} feeds a new {@code IN}
-     * back into the loop, while {@link LoopStep#done} exits and continues the pipeline with an {@code OUT}.
+     * <p>The {@code builder} composes the loop body as its own pipeline using the same vocabulary as the
+     * outer stream — {@code map} (event loop), {@code blockingMap} (worker thread), {@code asyncMap}
+     * (non-blocking async) — over the loop state {@code IN}, terminated with {@link LoopStream#until}.
+     * Each iteration produces a {@link LoopStep}: {@link LoopStep#again} feeds a new {@code IN} back into
+     * the loop, {@link LoopStep#done} exits and continues the outer pipeline with an {@code OUT}.
      *
-     * <p>The loop is one async instruction in the chain — everything before and after it stays a flat,
-     * forward-typed pipeline. Recursion is encoded as data ({@link LoopStep}) exactly as errors are
-     * encoded as data ({@link Result}). The loop is bounded by {@link LoopConfig}; exceeding the iteration
-     * cap ends the loop with an error rather than spinning forever.
+     * <p>The loop compiles to a single instruction in the outer chain, so everything before and after it
+     * stays a flat, forward-typed pipeline. The loop body runs with full thread fidelity: blocking steps
+     * execute on a worker thread, non-blocking steps on the application context. The loop is bounded by
+     * {@link LoopConfig}; exceeding the iteration cap ends it with an error rather than spinning forever.
      */
     public <OUT> LuxisStream<OUT, APP, RESP, ERR, SESSION> loop(
             final LoopConfig config,
-            final StreamAsyncMapper<AsyncRouteContext<IN, APP, SESSION, ERR>, LoopStep<IN, OUT>, ERR> body) {
-        final StreamAsyncFlatMapper<AsyncRouteContext<IN, APP, SESSION, ERR>, ERR, OUT> wrapper = ctx -> {
-            final CompletableFuture<Result<ERR, OUT>> resultFuture = new CompletableFuture<>();
-            final SESSION session = ctx.session();
-            final Function<IN, AsyncRouteContext<IN, APP, SESSION, ERR>> contextFactory =
-                    state -> new AsyncRouteContext<>(state, session, applicationState, databaseClient, messaging.outboxStore(), messaging.drainer());
-            runLoopIteration(resultFuture, ctx.in(), config.maxIterations, config, contextFactory, body);
-            return resultFuture.exceptionally(throwable -> {
-                final Throwable cause = throwable instanceof CompletionException ? throwable.getCause() : throwable;
-                pendingAsyncResponses.reportException(
-                        cause instanceof Exception ? (Exception) cause : new RuntimeException(cause));
-                return Result.error(errorMessageResponseMapper.map(new ErrorMessageResponse("Something went wrong"), ErrorCause.ASYNC_ERROR));
-            });
-        };
-        final MapInstruction<IN, OUT, APP, SESSION, ERR> e = MapInstruction.nonBlockingAsync(wrapper, false);
+            final Function<LoopStream<IN, APP, ERR, SESSION>, CompletedLoop<IN, OUT, APP, ERR, SESSION>> builder) {
+        final List<MapInstruction> subChain = new ArrayList<>();
+        final LuxisStream<IN, APP, Void, ERR, SESSION> seed =
+                new LuxisStream<>(subChain, applicationState, pendingAsyncResponses, errorMessageResponseMapper, ender, databaseClient, messaging);
+        final CompletedLoop<IN, OUT, APP, ERR, SESSION> completed = builder.apply(new LoopStream<>(seed));
+        final LoopSubChain loopSubChain = new LoopSubChain(completed.subChain(), config.maxIterations, errorMessageResponseMapper);
+        final MapInstruction<IN, OUT, APP, SESSION, ERR> e = MapInstruction.loop(loopSubChain, false);
         appendInstruction(e);
         return new LuxisStream<>(instructionChain, applicationState, pendingAsyncResponses, errorMessageResponseMapper, ender, databaseClient, messaging);
     }
 
     /**
-     * Convenience form of {@link #loop} for when the loop state is also the loop output. Runs {@code body}
-     * repeatedly while {@code continueWhile} holds on the value it produces, then continues the pipeline
-     * with the final value.
+     * Convenience form of {@link #loop} for when the loop state is also the loop output. Runs the async
+     * {@code body} repeatedly while {@code continueWhile} holds on the value it produces, then continues
+     * the pipeline with the final value.
      */
     public LuxisStream<IN, APP, RESP, ERR, SESSION> loopWhile(
             final Predicate<IN> continueWhile,
             final LoopConfig config,
             final StreamAsyncMapper<AsyncRouteContext<IN, APP, SESSION, ERR>, IN, ERR> body) {
-        return this.<IN>loop(config, ctx -> body.handle(ctx).map(next ->
-                continueWhile.test(next)
+        return this.<IN>loop(config, loop -> loop
+                .asyncMap(body)
+                .until(next -> continueWhile.test(next)
                         ? LoopStep.<IN, IN>again(next)
                         : LoopStep.<IN, IN>done(next)));
-    }
-
-    private <OUT> void runLoopIteration(
-            final CompletableFuture<Result<ERR, OUT>> resultFuture,
-            final IN state,
-            final int iterationsRemaining,
-            final LoopConfig config,
-            final Function<IN, AsyncRouteContext<IN, APP, SESSION, ERR>> contextFactory,
-            final StreamAsyncMapper<AsyncRouteContext<IN, APP, SESSION, ERR>, LoopStep<IN, OUT>, ERR> body) {
-        if (iterationsRemaining <= 0) {
-            resultFuture.complete(Result.error(errorMessageResponseMapper.map(
-                    new ErrorMessageResponse("Loop exceeded max iterations of " + config.maxIterations), ErrorCause.ASYNC_ERROR)));
-            return;
-        }
-
-        final AtomicBoolean handled = new AtomicBoolean(false);
-        final TimeoutScheduler.Cancellable timeout = pendingAsyncResponses.scheduleTimeout(
-                config.iterationTimeoutMillis,
-                () -> {
-                    if (handled.compareAndSet(false, true)) {
-                        resultFuture.completeExceptionally(new RuntimeException("Loop iteration timed out"));
-                    }
-                }, ScheduleType.TIMEOUT);
-
-        final CompletableFuture<Result<ERR, LoopStep<IN, OUT>>> attempt;
-        try {
-            attempt = body.handle(contextFactory.apply(state)).toCompletableFuture();
-        } catch (final Exception e) {
-            timeout.cancel();
-            if (handled.compareAndSet(false, true)) {
-                resultFuture.completeExceptionally(e);
-            }
-            return;
-        }
-
-        attempt.whenComplete((result, throwable) -> {
-            if (!handled.compareAndSet(false, true)) {
-                return;
-            }
-            timeout.cancel();
-            if (throwable != null) {
-                resultFuture.completeExceptionally(throwable);
-                return;
-            }
-            result.consume(
-                    error -> resultFuture.complete(Result.error(error)),
-                    step -> step.consume(
-                            next -> runLoopIteration(resultFuture, next, iterationsRemaining - 1, config, contextFactory, body),
-                            done -> resultFuture.complete(Result.success(done))
-                    )
-            );
-        });
     }
 
     public <OUT> LuxisPipeline<OUT> complete(final StreamFlatMapper<RouteContext<IN, APP, SESSION>, ERR, OUT> mapper) {

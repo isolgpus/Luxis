@@ -16,8 +16,8 @@ public class VertxRouterWrapperImpl extends RouterWrapper {
     private final Router router;
     private final int defaultTimeoutMillis;
 
-    public VertxRouterWrapperImpl(final Router router, final int defaultTimeoutMillis, final Consumer<Exception> exceptionHandler, final PendingAsyncResponses pendingAsyncResponses, final TransactionExecutor transactionExecutor, final DatabaseClient<?, ?, ?> databaseClient, final MessagingComponents messaging) {
-        super(exceptionHandler, pendingAsyncResponses, transactionExecutor, databaseClient, messaging);
+    public VertxRouterWrapperImpl(final Router router, final int defaultTimeoutMillis, final Consumer<Exception> exceptionHandler, final PendingAsyncResponses pendingAsyncResponses, final TransactionExecutor transactionExecutor, final LoopExecutor loopExecutor, final DatabaseClient<?, ?, ?> databaseClient, final MessagingComponents messaging) {
+        super(exceptionHandler, pendingAsyncResponses, transactionExecutor, loopExecutor, databaseClient, messaging);
         this.router = router;
         this.defaultTimeoutMillis = defaultTimeoutMillis;
     }
@@ -81,6 +81,8 @@ public class VertxRouterWrapperImpl extends RouterWrapper {
         for (final MapInstruction applicationInstruction : flow.getApplicationInstructions()) {
             if (applicationInstruction.isTransactional) {
                 route.handler(ctx -> handleTransactional(applicationInstruction, new VertxRequestContextImpl(ctx), flow.getApplicationState(), flow.getEnder()));
+            } else if (applicationInstruction.isLoop) {
+                route.handler(ctx -> handleLoop(applicationInstruction, new VertxRequestContextImpl(ctx), flow.getApplicationState(), flow.getEnder()));
             } else if (applicationInstruction.isAsync && applicationInstruction.isBlocking) {
                 route.blockingHandler(ctx -> handleAsync(applicationInstruction, new VertxRequestContextImpl(ctx), flow.getApplicationState(), flow.getEnder()));
             } else if (applicationInstruction.isAsync) {

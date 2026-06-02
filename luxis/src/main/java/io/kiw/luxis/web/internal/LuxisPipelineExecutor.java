@@ -17,6 +17,7 @@ public class LuxisPipelineExecutor<SESSION> {
     private final PendingAsyncResponses pendingAsyncResponses;
     private final LuxisPipelineHandler<SESSION> handler;
     private final TransactionExecutor transactionExecutor;
+    private final LoopExecutor loopExecutor;
     private final DatabaseClient<?, ?, ?> databaseClient;
     private final MessagingComponents messaging;
 
@@ -37,6 +38,7 @@ public class LuxisPipelineExecutor<SESSION> {
         this.databaseClient = databaseClient;
         this.messaging = messaging != null ? messaging : MessagingComponents.NONE;
         this.transactionExecutor = databaseClient == null ? null : new TransactionExecutor(databaseClient, executionDispatcher, this.messaging);
+        this.loopExecutor = new LoopExecutor(executionDispatcher, pendingAsyncResponses, databaseClient, this.messaging);
     }
 
     @SuppressWarnings("unchecked")
@@ -57,6 +59,10 @@ public class LuxisPipelineExecutor<SESSION> {
     private <IN, OUT, APP> void handleAndContinue(final SESSION session, final LuxisPipeline<?> pipeline, final MapInstruction<IN, OUT, APP, SESSION, ErrorMessageResponse> instruction, final IN message) {
         if (instruction.isTransactional) {
             handleTransaction(session, pipeline, instruction, message);
+            return;
+        }
+        if (instruction.isLoop) {
+            handleLoop(session, pipeline, instruction, message);
             return;
         }
         if (instruction.isAsync) {
@@ -119,6 +125,25 @@ public class LuxisPipelineExecutor<SESSION> {
         } else {
             executionDispatcher.handleOnApplicationContext(action);
         }
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private <IN, OUT, APP> void handleLoop(
+            final SESSION session,
+            final LuxisPipeline<?> pipeline,
+            final MapInstruction<IN, OUT, APP, SESSION, ErrorMessageResponse> instruction,
+            final IN message) {
+        loopExecutor.execute(session, appState, instruction, message, exceptionHandler, new LoopExecutor.Callbacks() {
+            @Override
+            public void onSuccess(final Object finalValue) {
+                continueChain(session, pipeline, instruction, finalValue, ThreadContext.APPLICATION_CONTEXT);
+            }
+
+            @Override
+            public void onError(final Object errValue) {
+                handler.handleFailure(session, instruction, (ErrorMessageResponse) errValue);
+            }
+        });
     }
 
     private <IN, OUT, APP> void handleTransaction(

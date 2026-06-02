@@ -5,6 +5,7 @@ import io.kiw.luxis.web.LuxisBuilder;
 import io.kiw.luxis.web.WebServerConfig;
 import io.kiw.luxis.web.db.DatabaseClient;
 import io.kiw.luxis.web.internal.EventConsumerHandler;
+import io.kiw.luxis.web.internal.LoopExecutor;
 import io.kiw.luxis.web.internal.MessagingComponents;
 import io.kiw.luxis.web.internal.OutboxDrainer;
 import io.kiw.luxis.web.internal.PendingAsyncResponses;
@@ -70,7 +71,8 @@ public class TestLuxis<APP> implements Luxis<APP> {
         final MessagingComponents messaging = MessagingComponents.of(publisher, outboxStore, drainer);
 
         final TransactionExecutor transactionExecutor = databaseClient == null ? null : new TransactionExecutor(databaseClient, executionDispatcher, messaging);
-        final StubRouter router = new StubRouter(handler, pendingAsyncResponses, transactionExecutor, databaseClient, messaging);
+        final LoopExecutor loopExecutor = new LoopExecutor(executionDispatcher, pendingAsyncResponses, databaseClient, messaging);
+        final StubRouter router = new StubRouter(handler, pendingAsyncResponses, transactionExecutor, loopExecutor, databaseClient, messaging);
         config.corsConfig().ifPresent(router::configureCors);
         router.setMaxBodySize(config.maxBodySize());
 

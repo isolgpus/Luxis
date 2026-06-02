@@ -4,9 +4,11 @@ import io.kiw.luxis.web.handler.WebSocketRoutes;
 import io.kiw.luxis.web.pipeline.LoopConfig;
 import io.kiw.luxis.web.pipeline.LoopStep;
 import io.kiw.luxis.web.pipeline.WebSocketRoutesRegister;
+import io.kiw.luxis.web.test.AsyncTestSupport;
 import io.kiw.luxis.web.test.MyApplicationState;
 
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Exercises {@link io.kiw.luxis.web.pipeline.LuxisStream#loop} over the WebSocket pipeline (which runs
@@ -28,10 +30,13 @@ public class LoopWebSocketRoutes extends WebSocketRoutes<MyApplicationState, Tes
 
         routesRegister.registerInbound("loop", WebSocketNumberRequest.class, s ->
                 s.map(ctx -> new Counter(0, ctx.in().value))
-                        .<WebSocketNumberResponse>loop(LoopConfig.maxIterations(20), loop -> loop
+                        .loop(LoopConfig.maxIterations(20), loop -> loop
                                 .blockingMap(ctx -> {
                                     iterationCounter.incrementAndGet();
-                                    return ctx.in().increment();
+                                    return new AtomicReference<>(ctx.in().increment());
+                                })
+                                .asyncMap(ctx -> {
+                                    return AsyncTestSupport.completed(ctx.in().get());
                                 })
                                 .until(c -> c.count() >= c.target()
                                         ? LoopStep.<Counter, WebSocketNumberResponse>done(new WebSocketNumberResponse(c.count()))

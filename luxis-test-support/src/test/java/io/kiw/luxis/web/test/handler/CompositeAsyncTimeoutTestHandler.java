@@ -8,6 +8,8 @@ import io.kiw.luxis.web.http.HttpResult;
 import io.kiw.luxis.web.http.client.CompositeLuxisAsync;
 import io.kiw.luxis.web.http.client.LuxisAsync;
 import io.kiw.luxis.web.internal.LuxisPipeline;
+import io.kiw.luxis.web.pipeline.AsyncMapConfig;
+import io.kiw.luxis.web.pipeline.AsyncMapConfigBuilder;
 import io.kiw.luxis.web.pipeline.HttpStream;
 import io.kiw.luxis.web.test.AsyncTestSupport;
 import io.kiw.luxis.web.test.MyApplicationState;
@@ -27,7 +29,7 @@ public class CompositeAsyncTimeoutTestHandler implements JsonHandler<AsyncMapReq
                         .add("slow", new LuxisAsync<Integer, HttpErrorResponse>(new CompletableFuture<>()),
                                 Duration.ofMillis(20),
                                 new HttpErrorResponse(new ErrorMessageResponse("slow timed out"), 504))
-                        .combine())
+                        .combine(), new AsyncMapConfigBuilder().setTimeoutMillis(10000).build())
                 .flatMap(ctx -> {
                     final Map<String, Result<HttpErrorResponse, Object>> results = ctx.in();
                     // collapse: the timed-out "slow" entry is a Result.error that short-circuits here

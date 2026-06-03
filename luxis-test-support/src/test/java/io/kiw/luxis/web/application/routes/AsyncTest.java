@@ -13,6 +13,8 @@ import io.kiw.luxis.web.test.handler.AsyncMapRequest;
 import io.kiw.luxis.web.test.handler.AsyncRetryTestHandler;
 import io.kiw.luxis.web.test.handler.AsyncRetryWebSocketRoutes;
 import io.kiw.luxis.web.test.handler.AsyncThrowTestHandler;
+import io.kiw.luxis.web.test.handler.CompositeAsyncErrorTestHandler;
+import io.kiw.luxis.web.test.handler.CompositeAsyncTestHandler;
 import io.kiw.luxis.web.test.handler.TestRetryBehaviour;
 import org.junit.After;
 import org.junit.Assert;
@@ -81,6 +83,47 @@ public class AsyncTest {
 
         Assert.assertEquals(500, response.statusCode);
         luxisTestClient.assertException("app error in asyncMap");
+    }
+
+    @Test
+    public void shouldCombineMultipleAsyncsIntoSingleResponse() {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/composite", Method.POST, state, AsyncMapRequest.class, new CompositeAsyncTestHandler());
+
+            return state;
+        }));
+
+        final TestClient luxisTestClient = testClientAndServer.client();
+
+        final TestHttpResponse response = luxisTestClient.post(
+                StubRequest.request("/composite").body(json().put("value", 7).toString()));
+
+        Assert.assertEquals(
+                TestHttpResponse.response(json().put("result", 35).toString()),
+                response);
+    }
+
+    @Test
+    public void shouldReturnErrorWhenOneCompositeAsyncFails() {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/composite", Method.POST, state, AsyncMapRequest.class, new CompositeAsyncErrorTestHandler());
+
+            return state;
+        }));
+
+        final TestClient luxisTestClient = testClientAndServer.client();
+
+        final TestHttpResponse response = luxisTestClient.post(
+                StubRequest.request("/composite").body(json().put("value", 7).toString()));
+
+        Assert.assertEquals(
+                TestHttpResponse.response(json()
+                        .put("message", "composite failure")
+                        .set("errors", json()).toString()).withStatusCode(500),
+                response);
+        luxisTestClient.assertNoMoreExceptions();
     }
 
     @Test

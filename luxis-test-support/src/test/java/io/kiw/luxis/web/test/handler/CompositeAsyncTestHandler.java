@@ -1,5 +1,6 @@
 package io.kiw.luxis.web.test.handler;
 
+import io.kiw.luxis.result.Result;
 import io.kiw.luxis.web.handler.JsonHandler;
 import io.kiw.luxis.web.http.HttpErrorResponse;
 import io.kiw.luxis.web.http.HttpResult;
@@ -16,18 +17,18 @@ public class CompositeAsyncTestHandler implements JsonHandler<AsyncMapRequest, A
     @Override
     public LuxisPipeline<AsyncMapResponse> handle(final HttpStream<AsyncMapRequest, MyApplicationState> httpStream) {
         return httpStream
-                .<Map<String, Object>>asyncMap(ctx -> {
+                .<Map<String, Result<HttpErrorResponse, Object>>>asyncMap(ctx -> {
                     final int value = ctx.in().value;
                     return CompositeLuxisAsync.<HttpErrorResponse>create()
                             .add("doubled", AsyncTestSupport.<Integer, HttpErrorResponse>completed(value * 2))
                             .add("tripled", AsyncTestSupport.<Integer, HttpErrorResponse>completed(value * 3))
                             .combine();
                 })
-                .map(ctx -> {
-                    final Map<String, Object> results = ctx.in();
-                    final int doubled = (Integer) results.get("doubled");
-                    final int tripled = (Integer) results.get("tripled");
-                    return new AsyncMapResponse(doubled + tripled);
+                .flatMap(ctx -> {
+                    final Map<String, Result<HttpErrorResponse, Object>> results = ctx.in();
+                    return results.get("doubled").flatMap(doubled ->
+                            results.get("tripled").map(tripled ->
+                                    new AsyncMapResponse((Integer) doubled + (Integer) tripled)));
                 })
                 .complete(ctx -> HttpResult.success(ctx.in()));
     }

@@ -13,7 +13,7 @@ import io.kiw.luxis.web.test.MyApplicationState;
 
 import java.util.Map;
 
-public class CompositeAsyncErrorTestHandler implements JsonHandler<AsyncMapRequest, AsyncMapResponse, MyApplicationState> {
+public class CompositeAsyncPartialTestHandler implements JsonHandler<AsyncMapRequest, AsyncMapResponse, MyApplicationState> {
 
     @Override
     public LuxisPipeline<AsyncMapResponse> handle(final HttpStream<AsyncMapRequest, MyApplicationState> httpStream) {
@@ -23,11 +23,12 @@ public class CompositeAsyncErrorTestHandler implements JsonHandler<AsyncMapReque
                         .add("bad", AsyncTestSupport.<Integer, HttpErrorResponse>failed(
                                 new HttpErrorResponse(new ErrorMessageResponse("composite failure"), 500)))
                         .combine())
-                .flatMap(ctx -> {
+                .map(ctx -> {
                     final Map<String, Result<HttpErrorResponse, Object>> results = ctx.in();
-                    // collapse: any failed operation fails the whole step
-                    return results.get("ok").flatMap(ok ->
-                            results.get("bad").map(bad -> new AsyncMapResponse((Integer) ok + (Integer) bad)));
+                    // accept partial: fall back to 0 for any operation that failed
+                    final int ok = results.get("ok").fold(failure -> 0, success -> (Integer) success);
+                    final int bad = results.get("bad").fold(failure -> 0, success -> (Integer) success);
+                    return new AsyncMapResponse(ok + bad);
                 })
                 .complete(ctx -> HttpResult.success(ctx.in()));
     }

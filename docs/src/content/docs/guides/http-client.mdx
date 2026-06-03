@@ -110,6 +110,32 @@ Or `fold` each result and supply a fallback for the ones that failed:
 
 Because the map values are `Result<ERR, Object>`, you cast each success back to its known type as you read it. The labels are yours to choose; they're the contract between the `add` calls and the step that consumes the results.
 
+### Per-operation timeouts
+
+The `asyncMap` step has a single timeout covering the whole composite — so by default one slow call holds up the entire batch until that overall timeout trips, and every result is discarded. When a call is best-effort, give it its own budget with the `Duration` overload of `add`. If it doesn't complete in time, that entry resolves to the error you supply (just another `Result.error` in the map) while the rest carry on:
+
+```java
+.<Map<String, Result<HttpErrorResponse, Object>>>asyncMap(ctx ->
+    CompositeLuxisAsync.<HttpErrorResponse>create()
+        // critical call — relies on the overall step timeout
+        .add("user", httpClient.get("/users/" + ctx.in().userId(), User.class))
+        // best-effort enrichment — capped at 500ms
+        .add("recommendations",
+            httpClient.get("/recommendations/" + ctx.in().userId(), Recs.class),
+            Duration.ofMillis(500),
+            new HttpErrorResponse(new ErrorMessageResponse("recommendations timed out"), 504))
+        .combine())
+.map(ctx -> {
+    Map<String, Result<HttpErrorResponse, Object>> results = ctx.in();
+    User user = (User) results.get("user").fold(err -> User.unknown(), s -> s);
+    // if recommendations timed out this is the 504 error → fall back to empty
+    Recs recs = (Recs) results.get("recommendations").fold(err -> Recs.empty(), s -> s);
+    return new ProfileResponse(user, recs);
+})
+```
+
+The underlying call isn't cancelled — the timeout value just wins the race and any late result is ignored. Set per-operation timeouts *below* the step timeout so a slow non-critical call degrades gracefully instead of sinking the whole batch.
+
 ### Exceptions vs. graceful errors
 
 A graceful `Result.error` from any operation is captured in the map for you to handle, as above. The combined async only *fails* (completes exceptionally) if one of its operations completes exceptionally — in which case the pipeline's exception handler takes over, exactly as it would for a single `asyncMap`. The same goes for the step's timeout: it covers the composite as a whole, so if any operation never comes back, the whole step times out (the other results are discarded and the in-flight calls are not cancelled).

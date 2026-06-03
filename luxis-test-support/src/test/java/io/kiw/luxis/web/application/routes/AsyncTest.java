@@ -16,6 +16,7 @@ import io.kiw.luxis.web.test.handler.AsyncThrowTestHandler;
 import io.kiw.luxis.web.test.handler.CompositeAsyncErrorTestHandler;
 import io.kiw.luxis.web.test.handler.CompositeAsyncPartialTestHandler;
 import io.kiw.luxis.web.test.handler.CompositeAsyncTestHandler;
+import io.kiw.luxis.web.test.handler.CompositeAsyncTimeoutTestHandler;
 import io.kiw.luxis.web.test.handler.TestRetryBehaviour;
 import org.junit.After;
 import org.junit.Assert;
@@ -143,6 +144,28 @@ public class AsyncTest {
 
         Assert.assertEquals(
                 TestHttpResponse.response(json().put("result", 7).toString()),
+                response);
+        luxisTestClient.assertNoMoreExceptions();
+    }
+
+    @Test
+    public void shouldApplyAPerOperationTimeoutToASlowCompositeAsync() {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/composite", Method.POST, state, AsyncMapRequest.class, new CompositeAsyncTimeoutTestHandler());
+
+            return state;
+        }));
+
+        final TestClient luxisTestClient = testClientAndServer.client();
+
+        final TestHttpResponse response = luxisTestClient.post(
+                StubRequest.request("/composite").body(json().put("value", 7).toString()));
+
+        Assert.assertEquals(
+                TestHttpResponse.response(json()
+                        .put("message", "slow timed out")
+                        .set("errors", json()).toString()).withStatusCode(504),
                 response);
         luxisTestClient.assertNoMoreExceptions();
     }

@@ -11,27 +11,31 @@ import java.util.concurrent.CompletableFuture;
  * {@link LuxisAsync} that completes once every one of them has completed.
  *
  * <p>Each operation is registered against a label. The combined async resolves to a
- * {@code Map<String, Object>} keyed by those labels, where each value is the success value of the
- * corresponding operation. This lets a single {@code asyncMap} step fire several async calls in
- * parallel and wait for all of them before continuing:
+ * {@code Map<String, Result<ERR, Object>>} keyed by those labels, where each value is the
+ * {@link Result} of the corresponding operation. This lets a single {@code asyncMap} step fire
+ * several async calls in parallel, wait for all of them, and then leave it to the caller to decide
+ * what to do with the mix of successes and failures — collapse the whole thing to an error if any
+ * one failed, or accept that some did not work and carry on with the rest:
  *
  * <pre>{@code
- * .asyncMap(ctx -> CompositeLuxisAsync.<HttpErrorResponse>create()
- *         .add("user", httpClient.get("/users/" + ctx.in().userId(), User.class))
- *         .add("orders", httpClient.get("/orders/" + ctx.in().userId(), Orders.class))
- *         .combine())
- * .map(ctx -> {
- *     Map<String, Object> results = ctx.in();
- *     User user = (User) results.get("user");
- *     Orders orders = (Orders) results.get("orders");
- *     return new ProfileResponse(user, orders);
+ * .<Map<String, Result<HttpErrorResponse, Object>>>asyncMap(ctx ->
+ *         CompositeLuxisAsync.<HttpErrorResponse>create()
+ *                 .add("user", httpClient.get("/users/" + ctx.in().userId(), User.class))
+ *                 .add("orders", httpClient.get("/orders/" + ctx.in().userId(), Orders.class))
+ *                 .combine())
+ * .flatMap(ctx -> {
+ *     Map<String, Result<HttpErrorResponse, Object>> results = ctx.in();
+ *     // collapse: fail the whole step if either call failed
+ *     return results.get("user").flatMap(user ->
+ *             results.get("orders").map(orders ->
+ *                     new ProfileResponse((User) user, (Orders) orders)));
  * })
  * }</pre>
  *
- * <p>All registered operations are always awaited. If any of them resolves to an error, the
- * combined async resolves to the first error encountered (in registration order). If any of them
- * completes exceptionally, the combined async completes exceptionally too, which the pipeline
- * surfaces through its exception handler.
+ * <p>All registered operations are always awaited, and a failure of one does not stop the others.
+ * The combined async only fails (completes exceptionally) if one of its operations completes
+ * exceptionally — which the pipeline surfaces through its exception handler. A graceful
+ * {@code Result.error} from any operation is captured in the map for the caller to handle.
  *
  * @param <ERR> the shared error type of every registered operation
  */
@@ -51,11 +55,11 @@ public final class CompositeLuxisAsync<ERR> {
         return this;
     }
 
-    public LuxisAsync<Map<String, Object>, ERR> combine() {
+    public LuxisAsync<Map<String, Result<ERR, Object>>, ERR> combine() {
         final Map<String, CompletableFuture<Result<ERR, Object>>> futures = new LinkedHashMap<>();
         asyncs.forEach((label, async) -> futures.put(label, async.toCompletableFuture()));
 
-        final CompletableFuture<Result<ERR, Map<String, Object>>> combined = new CompletableFuture<>();
+        final CompletableFuture<Result<ERR, Map<String, Result<ERR, Object>>>> combined = new CompletableFuture<>();
         final CompletableFuture<?>[] all = futures.values().toArray(new CompletableFuture<?>[0]);
 
         CompletableFuture.allOf(all).whenComplete((ignored, throwable) -> {
@@ -64,19 +68,8 @@ public final class CompositeLuxisAsync<ERR> {
                 return;
             }
 
-            final Map<String, Object> values = new LinkedHashMap<>();
-            for (final Map.Entry<String, CompletableFuture<Result<ERR, Object>>> entry : futures.entrySet()) {
-                final Result<ERR, Map<String, Object>> error = entry.getValue().join().fold(
-                        failure -> Result.<ERR, Map<String, Object>>error(failure),
-                        success -> {
-                            values.put(entry.getKey(), success);
-                            return null;
-                        });
-                if (error != null) {
-                    combined.complete(error);
-                    return;
-                }
-            }
+            final Map<String, Result<ERR, Object>> values = new LinkedHashMap<>();
+            futures.forEach((label, future) -> values.put(label, future.join()));
             combined.complete(Result.success(values));
         });
 

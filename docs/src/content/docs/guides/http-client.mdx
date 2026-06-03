@@ -70,24 +70,49 @@ Result<HttpErrorResponse, HttpClientResponse<String>> result =
 
 ## Combining parallel calls
 
-Sometimes a single step needs several independent async calls — and you want to fire them all at once and continue only when every one has come back. `CompositeLuxisAsync` combines many `LuxisAsync` operations (which must share the same error type) into one. It resolves to a `Map<String, Object>` keyed by the label you give each operation, where each value is that operation's success value:
+Sometimes a single step needs several independent async calls — and you want to fire them all at once and continue only when every one has come back. `CompositeLuxisAsync` combines many `LuxisAsync` operations (which must share the same error type) into one. It resolves to a `Map<String, Result<ERR, Object>>` keyed by the label you give each operation, where each value is that operation's `Result`:
 
 ```java
-.asyncMap(ctx -> CompositeLuxisAsync.<HttpErrorResponse>create()
-    .add("user", httpClient.get("/users/" + ctx.in().userId(), User.class))
-    .add("orders", httpClient.get("/orders/" + ctx.in().userId(), Orders.class))
-    .combine())
-.map(ctx -> {
-    Map<String, Object> results = ctx.in();
-    HttpClientResponse<User> user = (HttpClientResponse<User>) results.get("user");
-    HttpClientResponse<Orders> orders = (HttpClientResponse<Orders>) results.get("orders");
-    return new ProfileResponse(user.body(), orders.body());
+.<Map<String, Result<HttpErrorResponse, Object>>>asyncMap(ctx ->
+    CompositeLuxisAsync.<HttpErrorResponse>create()
+        .add("user", httpClient.get("/users/" + ctx.in().userId(), User.class))
+        .add("orders", httpClient.get("/orders/" + ctx.in().userId(), Orders.class))
+        .combine())
+```
+
+All registered operations run in parallel and are always awaited — a failure of one does not stop the others. Crucially, `combine()` itself never decides your failure policy: every operation's outcome is handed back to you as a `Result` in the map, and **you** choose what to do with the mix.
+
+### Collapse — fail the step if any call failed
+
+Chain the results with `flatMap`/`map` so the first error short-circuits the whole step:
+
+```java
+.flatMap(ctx -> {
+    Map<String, Result<HttpErrorResponse, Object>> results = ctx.in();
+    return results.get("user").flatMap(user ->
+        results.get("orders").map(orders ->
+            new ProfileResponse((User) user, (Orders) orders)));
 })
 ```
 
-All registered operations run in parallel and are always awaited. If any one of them resolves to an error, the combined async resolves to the first error (in the order the operations were added) and the step short-circuits. If any one completes exceptionally, the combined async does too, and the pipeline's exception handler takes over — exactly as it would for a single `asyncMap`.
+### Accept partial results — carry on with what succeeded
 
-Because the map holds `Object` values, you cast each entry back to its known type when you read it. The labels are yours to choose; they're the contract between the `add` calls and the `map` that consumes the results.
+Or `fold` each result and supply a fallback for the ones that failed:
+
+```java
+.map(ctx -> {
+    Map<String, Result<HttpErrorResponse, Object>> results = ctx.in();
+    User user = results.get("user").fold(err -> User.unknown(), success -> (User) success);
+    Orders orders = results.get("orders").fold(err -> Orders.empty(), success -> (Orders) success);
+    return new ProfileResponse(user, orders);
+})
+```
+
+Because the map values are `Result<ERR, Object>`, you cast each success back to its known type as you read it. The labels are yours to choose; they're the contract between the `add` calls and the step that consumes the results.
+
+### Exceptions vs. graceful errors
+
+A graceful `Result.error` from any operation is captured in the map for you to handle, as above. The combined async only *fails* (completes exceptionally) if one of its operations completes exceptionally — in which case the pipeline's exception handler takes over, exactly as it would for a single `asyncMap`. The same goes for the step's timeout: it covers the composite as a whole, so if any operation never comes back, the whole step times out (the other results are discarded and the in-flight calls are not cancelled).
 
 ## Creating the client
 

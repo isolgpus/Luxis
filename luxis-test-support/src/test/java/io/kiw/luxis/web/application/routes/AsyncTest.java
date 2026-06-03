@@ -14,6 +14,7 @@ import io.kiw.luxis.web.test.handler.AsyncRetryTestHandler;
 import io.kiw.luxis.web.test.handler.AsyncRetryWebSocketRoutes;
 import io.kiw.luxis.web.test.handler.AsyncThrowTestHandler;
 import io.kiw.luxis.web.test.handler.CompositeAsyncErrorTestHandler;
+import io.kiw.luxis.web.test.handler.CompositeAsyncPartialTestHandler;
 import io.kiw.luxis.web.test.handler.CompositeAsyncTestHandler;
 import io.kiw.luxis.web.test.handler.TestRetryBehaviour;
 import org.junit.After;
@@ -105,7 +106,7 @@ public class AsyncTest {
     }
 
     @Test
-    public void shouldReturnErrorWhenOneCompositeAsyncFails() {
+    public void shouldReturnErrorWhenCollapsingACompositeWithAFailedAsync() {
         testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
             final MyApplicationState state = new MyApplicationState();
             r.jsonRoute("/composite", Method.POST, state, AsyncMapRequest.class, new CompositeAsyncErrorTestHandler());
@@ -122,6 +123,26 @@ public class AsyncTest {
                 TestHttpResponse.response(json()
                         .put("message", "composite failure")
                         .set("errors", json()).toString()).withStatusCode(500),
+                response);
+        luxisTestClient.assertNoMoreExceptions();
+    }
+
+    @Test
+    public void shouldAcceptPartialResultsWhenOneCompositeAsyncFails() {
+        testClientAndServer = creator.createTestServerAndClient(mode, Luxis.app(r -> {
+            final MyApplicationState state = new MyApplicationState();
+            r.jsonRoute("/composite", Method.POST, state, AsyncMapRequest.class, new CompositeAsyncPartialTestHandler());
+
+            return state;
+        }));
+
+        final TestClient luxisTestClient = testClientAndServer.client();
+
+        final TestHttpResponse response = luxisTestClient.post(
+                StubRequest.request("/composite").body(json().put("value", 7).toString()));
+
+        Assert.assertEquals(
+                TestHttpResponse.response(json().put("result", 7).toString()),
                 response);
         luxisTestClient.assertNoMoreExceptions();
     }

@@ -68,6 +68,27 @@ Result<HttpErrorResponse, HttpClientResponse<String>> result =
     httpClient.get("/api/value").toCompletableFuture().join();
 ```
 
+## Combining parallel calls
+
+Sometimes a single step needs several independent async calls — and you want to fire them all at once and continue only when every one has come back. `CompositeLuxisAsync` combines many `LuxisAsync` operations (which must share the same error type) into one. It resolves to a `Map<String, Object>` keyed by the label you give each operation, where each value is that operation's success value:
+
+```java
+.asyncMap(ctx -> CompositeLuxisAsync.<HttpErrorResponse>create()
+    .add("user", httpClient.get("/users/" + ctx.in().userId(), User.class))
+    .add("orders", httpClient.get("/orders/" + ctx.in().userId(), Orders.class))
+    .combine())
+.map(ctx -> {
+    Map<String, Object> results = ctx.in();
+    HttpClientResponse<User> user = (HttpClientResponse<User>) results.get("user");
+    HttpClientResponse<Orders> orders = (HttpClientResponse<Orders>) results.get("orders");
+    return new ProfileResponse(user.body(), orders.body());
+})
+```
+
+All registered operations run in parallel and are always awaited. If any one of them resolves to an error, the combined async resolves to the first error (in the order the operations were added) and the step short-circuits. If any one completes exceptionally, the combined async does too, and the pipeline's exception handler takes over — exactly as it would for a single `asyncMap`.
+
+Because the map holds `Object` values, you cast each entry back to its known type when you read it. The labels are yours to choose; they're the contract between the `add` calls and the `map` that consumes the results.
+
 ## Creating the client
 
 ### In-memory (stub)

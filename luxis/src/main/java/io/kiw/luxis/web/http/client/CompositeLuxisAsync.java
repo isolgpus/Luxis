@@ -2,9 +2,11 @@ package io.kiw.luxis.web.http.client;
 
 import io.kiw.luxis.result.Result;
 
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Combines multiple {@link LuxisAsync} operations that share the same error type into a single
@@ -52,6 +54,29 @@ public final class CompositeLuxisAsync<ERR> {
 
     public CompositeLuxisAsync<ERR> add(final String label, final LuxisAsync<?, ERR> async) {
         asyncs.put(label, async.map(value -> (Object) value));
+        return this;
+    }
+
+    /**
+     * Registers an operation with its own timeout. If {@code async} has not completed within
+     * {@code timeout}, this entry resolves to {@code Result.error(onTimeout)} rather than holding
+     * up the rest of the composite. The underlying operation is not cancelled — the timeout value
+     * simply wins the race and any late result is ignored.
+     *
+     * @param label     the key this operation's {@link Result} appears under in the combined map
+     * @param async     the operation to run
+     * @param timeout   how long to wait before recording {@code onTimeout}
+     * @param onTimeout the error to record for this entry if the timeout trips
+     */
+    public CompositeLuxisAsync<ERR> add(
+            final String label,
+            final LuxisAsync<?, ERR> async,
+            final Duration timeout,
+            final ERR onTimeout) {
+        final CompletableFuture<Result<ERR, Object>> future = async.map(value -> (Object) value)
+                .toCompletableFuture()
+                .completeOnTimeout(Result.<ERR, Object>error(onTimeout), timeout.toMillis(), TimeUnit.MILLISECONDS);
+        asyncs.put(label, new LuxisAsync<>(future));
         return this;
     }
 
